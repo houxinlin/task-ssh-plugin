@@ -25,6 +25,6 @@
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow id="SSH Task" secondary="true" icon="/icons/pluginIcon.svg" anchor="right"
-                    factoryClass="dev.cool.ISSH.task.toolwindow.SSHTaskWindow"/>
+                    factoryClass="dev.cool.ssh.task.toolwindow.SSHTaskWindow"/>
     </extensions>
 </idea-plugin>

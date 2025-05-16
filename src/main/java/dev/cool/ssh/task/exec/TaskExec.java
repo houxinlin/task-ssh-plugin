@@ -1,27 +1,37 @@
 package dev.cool.ssh.task.exec;
 
 import dev.cool.ssh.task.exec.factory.SSHFactory;
-import dev.cool.ssh.task.model.ExecuteInfo;
-import dev.cool.ssh.task.model.HostInfo;
-import dev.cool.ssh.task.model.Task;
+import dev.cool.ssh.task.exec.wrapper.ExecuteInfoWrapper;
+import dev.cool.ssh.task.exec.wrapper.HostInfoWrapper;
+import dev.cool.ssh.task.view.SSHTaskItem;
+import dev.cool.ssh.task.view.node.ExecutionNode;
+
+import java.util.List;
 
 public class TaskExec implements Runnable {
-    private final Task task;
+    private final List<HostInfoWrapper> task;
 
-    public TaskExec(Task task) {
+    public TaskExec(List<HostInfoWrapper> task) {
         this.task = task;
     }
 
-    private void execTask(HostInfo hostInfo) {
-        for (ExecuteInfo executeInfo : task.getExecutes()) {
-            ISSH ISSH = SSHFactory.getSSH(hostInfo);
-            ISSH.execute(executeInfo);
+    private void execTask(HostInfoWrapper hostInfo) {
+        for (ExecuteInfoWrapper executeInfo : hostInfo.getExecuteInfos()) {
+            ISSH ssh = SSHFactory.getSSH(hostInfo);
+            try {
+                ((ExecutionNode) executeInfo.getNode()).setState(State.RUNNING);
+                ssh.execute(executeInfo);
+                ((ExecutionNode) executeInfo.getNode()).setState(State.FINISHED);
+            } catch (Exception e) {
+                e.printStackTrace();
+                ((ExecutionNode) executeInfo.getNode()).setState(State.FAILED);
+            }
         }
     }
 
     @Override
     public void run() {
-        for (HostInfo host : task.getHosts()) {
+        for (HostInfoWrapper host : task) {
             execTask(host);
         }
     }

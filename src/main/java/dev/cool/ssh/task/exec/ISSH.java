@@ -1,7 +1,7 @@
 package dev.cool.ssh.task.exec;
 
-import dev.cool.ssh.task.model.ExecuteInfo;
+import dev.cool.ssh.task.exec.wrapper.ExecuteInfoWrapper;
 
 public interface ISSH {
-    void execute(ExecuteInfo executeInfo);
+    void execute(ExecuteInfoWrapper executeInfo) throws Exception;
 }

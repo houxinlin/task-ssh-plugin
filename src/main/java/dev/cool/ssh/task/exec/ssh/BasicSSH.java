@@ -8,4 +8,8 @@ public class BasicSSH {
     public BasicSSH(HostInfo hostInfo) {
         this.hostInfo = hostInfo;
     }
+
+    public HostInfo getHostInfo() {
+        return hostInfo;
+    }
 }

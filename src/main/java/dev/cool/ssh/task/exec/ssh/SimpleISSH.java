@@ -1,7 +1,7 @@
 package dev.cool.ssh.task.exec.ssh;
 
 import dev.cool.ssh.task.exec.ISSH;
-import dev.cool.ssh.task.model.ExecuteInfo;
+import dev.cool.ssh.task.exec.wrapper.ExecuteInfoWrapper;
 import dev.cool.ssh.task.model.HostInfo;
 
 public class SimpleISSH extends BasicSSH implements ISSH {
@@ -10,7 +10,7 @@ public class SimpleISSH extends BasicSSH implements ISSH {
     }
 
     @Override
-    public void execute(ExecuteInfo executeInfo) {
+    public void execute(ExecuteInfoWrapper executeInfo) {
 
     }
 }

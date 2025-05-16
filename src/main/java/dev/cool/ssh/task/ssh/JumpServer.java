@@ -64,13 +64,7 @@ public class JumpServer {
         }
     }
 
-    public static String getSecondLine(String input) {
-        if (input == null) {
-            return null;
-        }
-        String[] lines = input.split("\\r?\\n");
-        return lines.length >= 2 ? lines[1] : null;
-    }
+
 
     private static int getCRCount(byte[] bytes) {
         int count = 0;
