@@ -9,11 +9,6 @@ public class Task implements Serializable {
     private static final long serialVersionUID = 1L;
     private String taskName = "New Task";
     private List<HostInfo> hostInfos;
-    private List<ExecuteInfo> executeInfos;
-
-    public void setExecutes(List<ExecuteInfo> executeInfos) {
-        this.executeInfos = executeInfos;
-    }
 
     public String getTaskName() {
         return taskName;
@@ -21,11 +16,6 @@ public class Task implements Serializable {
 
     public void setTaskName(String taskName) {
         this.taskName = taskName;
-    }
-
-    public List<ExecuteInfo> getExecutes() {
-        if (executeInfos == null) executeInfos = new ArrayList<>();
-        return executeInfos;
     }
 
     public List<HostInfo> getHosts() {

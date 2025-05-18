@@ -1,34 +1,29 @@
 package dev.cool.ssh.task.view.dialog;
 
-import com.google.gson.Gson;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
-import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import com.intellij.ui.AnimatedIcon;
 import com.intellij.util.ui.JBUI;
 import dev.cool.ssh.task.model.ConnectionTestCallback;
 import dev.cool.ssh.task.model.HostInfo;
-import dev.cool.ssh.task.model.JumpServerHostInfo;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.awt.*;
 
-public class JumpServerSSHConfigDialog extends DialogWrapper {
+public class SimpleHostInfoConfigDialog extends DialogWrapper {
     private JTextField hostField;
     private JTextField portField;
     private JTextField usernameField;
     private JPasswordField passwordField;
-    private TextFieldWithBrowseButton assetIpField;
-    private JTextField userIdField;
     private final Project project;
     private JLabel testLabel;
 
-    public JumpServerSSHConfigDialog(@Nullable Project project) {
+    public SimpleHostInfoConfigDialog(@Nullable Project project) {
         super(project);
         this.project = project;
         init();
-        setSize(400, 300);
+        setSize(400, 200);
         setTitle("SSH Config");
     }
 
@@ -38,21 +33,17 @@ public class JumpServerSSHConfigDialog extends DialogWrapper {
         hostInfo.setPort(Integer.parseInt(portField.getText()));
         hostInfo.setUsername(usernameField.getText());
         hostInfo.setPassword(new String(passwordField.getPassword()));
-        hostInfo.setHostType(2);
-        JumpServerHostInfo jumpServerHostInfo = new JumpServerHostInfo();
-        jumpServerHostInfo.setIp(assetIpField.getText());
-        jumpServerHostInfo.setUserId(userIdField.getText());
-        hostInfo.setHostExtJSON(new Gson().toJson(jumpServerHostInfo));
+        hostInfo.setHostType(1);
         return hostInfo;
     }
 
     private void testConnection() {
-        if (testLabel.getIcon() == AnimatedIcon.Default.INSTANCE) {
+        if (testLabel.getIcon() == com.intellij.ui.AnimatedIcon.Default.INSTANCE) {
             return;
         }
-        
-        testLabel.setIcon(AnimatedIcon.Default.INSTANCE);
-        
+
+        testLabel.setIcon(com.intellij.ui.AnimatedIcon.Default.INSTANCE);
+
         HostInfo hostInfo = buildHost();
         hostInfo.testConnection(project, new ConnectionTestCallback() {
             @Override
@@ -83,10 +74,6 @@ public class JumpServerSSHConfigDialog extends DialogWrapper {
         panel.add(new JLabel("Authentication type:"), gbc);
         gbc.gridy++;
         panel.add(new JLabel("Password:"), gbc);
-        gbc.gridy++;
-        panel.add(new JLabel("资产ip:"), gbc);
-        gbc.gridy++;
-        panel.add(new JLabel("用户id:"), gbc);
 
         gbc.gridx = 1;
         gbc.gridy = 0;
@@ -94,8 +81,8 @@ public class JumpServerSSHConfigDialog extends DialogWrapper {
         
         // 创建主机地址和端口的容器面板
         JPanel hostPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        hostField = new JTextField("101.42.129.143");
-        portField = new JTextField("2222");
+        hostField = new JTextField("localhost");
+        portField = new JTextField("22");
         portField.setPreferredSize(new Dimension(60, hostField.getPreferredSize().height));
         hostPanel.add(hostField);
         hostPanel.add(new JLabel(":"));
@@ -103,20 +90,14 @@ public class JumpServerSSHConfigDialog extends DialogWrapper {
         panel.add(hostPanel, gbc);
         
         gbc.gridy++;
-        usernameField = new JTextField("houxinlin3219");
+        usernameField = new JTextField();
         panel.add(usernameField, gbc);
         gbc.gridy++;
         JComboBox<String> authTypeCombo = new JComboBox<>(new String[]{"Password", "Public Key"});
         panel.add(authTypeCombo, gbc);
         gbc.gridy++;
-        passwordField = new JPasswordField("Hxl495594@@");
+        passwordField = new JPasswordField();
         panel.add(passwordField, gbc);
-        gbc.gridy++;
-        assetIpField = new TextFieldWithBrowseButton();
-        panel.add(assetIpField, gbc);
-        gbc.gridy++;
-        userIdField = new JTextField();
-        panel.add(userIdField, gbc);
 
         // 添加测试连接标签
         gbc.gridy++;
@@ -149,14 +130,6 @@ public class JumpServerSSHConfigDialog extends DialogWrapper {
         });
         panel.add(testLabel, gbc);
 
-        assetIpField.addActionListener(e -> {
-            JumpServerHostInfoChooseDialog jumpServerHostInfoChooseDialog = new JumpServerHostInfoChooseDialog(project, hostField.getText(), usernameField.getText(), new String(passwordField.getPassword()));
-            jumpServerHostInfoChooseDialog.show();
-            String selectedHostName = jumpServerHostInfoChooseDialog.getSelectedHostName();
-            if (selectedHostName != null) {
-                assetIpField.setText(selectedHostName);
-            }
-        });
         return panel;
     }
 }

@@ -8,9 +8,9 @@ import javax.swing.*;
 
 public enum State {
     WAITING(Icons.Timer),
-    RUNNING(new AnimatedIcon.Default()),
+    RUNNING(AnimatedIcon.Default.INSTANCE),
     FAILED(AllIcons.General.Error),
-    FINISHED(AllIcons.Status.Success);
+    FINISHED(Icons.Success);
     private Icon icon;
 
     State(Icon icon) {

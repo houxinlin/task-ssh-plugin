@@ -9,11 +9,8 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 
 public class Transfer implements Runnable {
-    private static final int DEFAULT_BUFFER_SIZE = 8192;
     public InputStream szSourceInputStream;
     private final OutputStream outTo;
-    private int sendTotal = 0;
-    private ByteArrayOutputStream byteArrayOutputStream;
     private ProgressListener progressListener;
     private final String file;
 
@@ -33,37 +30,62 @@ public class Transfer implements Runnable {
         this.progressListener = progressListener;
     }
 
+    public static int findBytePositions(byte[] data, byte target) {
+        for (int i = 0; i < data.length; i++) {
+            if (data[i] == target) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     public void transferTo() throws IOException {
-        long size = Files.size(Paths.get(file));
-        byte[] message = new byte[]{
+        byte[] szFileDataPacakge = new byte[]{
                 (byte) 0x2A, (byte) 0x18, (byte) 0x43, (byte) 0x0A
         };
-        byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
+
+        long sendTotal = 0;
+        long size = Files.size(Paths.get(file));
+        System.out.println(size);
+        byte[] buffer = new byte[1024];
         int read;
-        while ((read = this.szSourceInputStream.read(buffer, 0, DEFAULT_BUFFER_SIZE)) >= 0) {
-            int start = 0;
-            if (startsWith(buffer, message) && byteArrayOutputStream == null) {
-                byteArrayOutputStream = new ByteArrayOutputStream();
-                start = 12;
-            }
-            if (byteArrayOutputStream != null && sendTotal != size) {
-                byteArrayOutputStream.write(buffer, start, read);
-                int chunk = size - sendTotal >= 1024 ? 1024 : (int) (size - sendTotal);
-                byte[] byteArray = byteArrayOutputStream.toByteArray();
-                while (byteArray.length >= chunk + 6 && chunk != 0) {
-                    sendTotal += chunk;
-                    byteArray = Arrays.copyOfRange(byteArray, chunk + 6, byteArray.length);
-                    byteArrayOutputStream.reset();
-                    byteArrayOutputStream.write(byteArray);
-                    float progress = (((float) sendTotal) / size);
-                    chunk = size - sendTotal >= 1024 ? 1024 : (int) (size - sendTotal);
-                    progressListener.onProgress(progress);
-                }
-            }
+        ByteArrayOutputStream cache = null;
+        while ((read = szSourceInputStream.read(buffer)) > 0) {
+            // 保持原有的输出逻辑
             outTo.write(buffer, 0, read);
             outTo.flush();
+            try {
+                if (startsWith(buffer, szFileDataPacakge)) {
+                    if (read>= 12) {
+                        cache = new ByteArrayOutputStream();
+                        cache.write(buffer, 12, read - 12);
+                    }
+                } else {
+                    if (cache != null) {
+                        cache.write(buffer, 0, read);
+                    }
+                }
+                if (cache != null) {
+                    byte[] byteArray = cache.toByteArray();
+                    long nextPackSize = size - sendTotal >= 1024 ? 1024 : (size - sendTotal);
+                    nextPackSize += 6;
+                    while (sendTotal != size && byteArray.length >= nextPackSize) {
+                        sendTotal += nextPackSize - 6;
+
+                        System.out.println(sendTotal);
+                        cache.reset();
+                        cache.write(Arrays.copyOfRange(byteArray, (int) nextPackSize, byteArray.length));
+                        byteArray = cache.toByteArray();
+                        float progress = (((float) sendTotal) / size);
+                        nextPackSize = size - sendTotal >= 1024 ? 1024 : (size - sendTotal);
+                        nextPackSize += 6;
+                        progressListener.onProgress(progress);
+                    }
+                }
+            } catch (Exception ignored) {
+
+            }
         }
-        progressListener.onComplete(null);
     }
 
     @Override

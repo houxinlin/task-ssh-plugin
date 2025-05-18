@@ -1,27 +1,41 @@
 package dev.cool.ssh.task.exec;
 
-import com.jcraft.jsch.Channel;
+import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.ChannelShell;
+import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
+import dev.cool.ssh.task.model.HostInfo;
 
 public class JschFactory {
-    public static Channel openChannel(String host, int port, String username, String password) throws Exception {
+    public static ChannelShell openChannel(HostInfo hostInfo) throws Exception {
         JSch jsch = new JSch();
-        Session session = null;
-        ChannelShell channel = null;
-        try {
-            session = jsch.getSession(username, host, port);
-            session.setPassword(password);
-            session.setConfig("StrictHostKeyChecking", "no");
-            session.connect(30000);
-            channel = (ChannelShell) session.openChannel("shell");
-            channel.setPty(true);
-            channel.connect();
+        Session session = jsch.getSession(hostInfo.getUsername(), hostInfo.getHost(), hostInfo.getPort());
+        session.setPassword(hostInfo.getPassword());
+        session.setConfig("StrictHostKeyChecking", "no");
+        session.connect();
+        ChannelShell channel = (ChannelShell) session.openChannel("shell");
+        return channel;
+    }
 
-        } catch (Exception e) {
-            throw e;
-        }
+    public static ChannelExec openExecChannel(HostInfo hostInfo) throws Exception {
+        JSch jsch = new JSch();
+        Session session = jsch.getSession(hostInfo.getUsername(), hostInfo.getHost(), hostInfo.getPort());
+        session.setPassword(hostInfo.getPassword());
+        session.setConfig("StrictHostKeyChecking", "no");
+        session.connect();
+        ChannelExec channel = (ChannelExec) session.openChannel("exec");
+        return channel;
+    }
+
+    public static ChannelSftp openSFTP(HostInfo hostInfo) throws Exception {
+        JSch jsch = new JSch();
+        Session session = jsch.getSession(hostInfo.getUsername(), hostInfo.getHost(), hostInfo.getPort());
+        session.setPassword(hostInfo.getPassword());
+        session.setConfig("StrictHostKeyChecking", "no");
+        session.connect();
+        ChannelSftp channel = (ChannelSftp) session.openChannel("sftp");
+        channel.connect();
         return channel;
     }
 }

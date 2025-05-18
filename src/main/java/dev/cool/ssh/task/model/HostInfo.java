@@ -1,5 +1,15 @@
 package dev.cool.ssh.task.model;
 
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.Messages;
+import com.jcraft.jsch.ChannelShell;
+import dev.cool.ssh.task.exec.JschFactory;
+
+import java.util.ArrayList;
+import java.util.List;
+import javax.swing.SwingUtilities;
+
 public class HostInfo {
     private String host;
     private int port;
@@ -8,6 +18,35 @@ public class HostInfo {
     private int hostType;
     private String hostExtJSON;
     private int sort;
+    private List<ExecuteInfo> executeInfos;
+
+    public void testConnection(Project project, ConnectionTestCallback callback) {
+        ApplicationManager.getApplication().executeOnPooledThread(() -> {
+            try {
+                ChannelShell channel = JschFactory.openChannel(this);
+                if (channel != null) {
+                    channel.disconnect();
+                    SwingUtilities.invokeLater(() -> {
+                        Messages.showInfoMessage(project, "连接成功！", "成功");
+                        callback.onSuccess();
+                    });
+                }
+            } catch (Exception e) {
+                SwingUtilities.invokeLater(() -> {
+                    Messages.showErrorDialog(project, "连接失败：" + e.getMessage(), "错误");
+                    callback.onError(e.getMessage());
+                });
+            }
+        });
+    }
+
+    public List<ExecuteInfo> getExecuteInfos() {
+        if (executeInfos == null) executeInfos = new ArrayList<>();
+        return executeInfos;
+    }
+    public void setExecuteInfos(List<ExecuteInfo> executeInfos) {
+        this.executeInfos = executeInfos;
+    }
 
     public int getSort() {
         return sort;

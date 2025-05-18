@@ -20,8 +20,11 @@ public class TreeStateNode extends DefaultMutableTreeNode {
         return state;
     }
 
+    protected void nodeChanged(){
+        ApplicationManager.getApplication().invokeLater(() -> ((DefaultTreeModel) tree.getModel()).nodeChanged(TreeStateNode.this));
+    }
     public void setState(State state) {
         this.state = state;
-        ApplicationManager.getApplication().invokeLater(() -> ((DefaultTreeModel) tree.getModel()).nodeChanged(TreeStateNode.this));
+        nodeChanged();
     }
 }

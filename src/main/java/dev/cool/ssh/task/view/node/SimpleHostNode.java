@@ -5,10 +5,10 @@ import dev.cool.ssh.task.model.HostInfo;
 
 import javax.swing.*;
 
-public class JumpNode extends HostNode {
+public class SimpleHostNode extends HostNode {
     private final HostInfo hostInfo;
 
-    public JumpNode(HostInfo hostInfo) {
+    public SimpleHostNode(HostInfo hostInfo) {
         super(hostInfo);
         this.hostInfo = hostInfo;
     }
@@ -19,6 +19,6 @@ public class JumpNode extends HostNode {
 
     @Override
     public Icon getIcon() {
-        return Icons.JumpServer;
+        return Icons.Host;
     }
 }
