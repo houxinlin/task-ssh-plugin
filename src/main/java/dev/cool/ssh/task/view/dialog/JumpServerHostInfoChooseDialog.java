@@ -2,7 +2,9 @@ package dev.cool.ssh.task.view.dialog;
 
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
+import com.intellij.openapi.util.Disposer;
 import com.intellij.ui.components.JBScrollPane;
+import dev.cool.ssh.task.model.HostInfo;
 import dev.cool.ssh.task.ssh.JumpServer;
 import dev.cool.ssh.task.ssh.JumpServerHostFinder;
 import org.jetbrains.annotations.Nullable;
@@ -14,9 +16,10 @@ import java.awt.*;
 public class JumpServerHostInfoChooseDialog extends DialogWrapper implements JumpServerHostFinder {
     private final JTable table;
     private String selectedHostName;
-    private JumpServer jumpServer = new JumpServer();
+    private JumpServer jumpServer;
 
-    public JumpServerHostInfoChooseDialog(@Nullable Project project, String host, String userName, String password) {
+    public JumpServerHostInfoChooseDialog(@Nullable Project project,
+                                          HostInfo hostInfo) {
         super(project);
         setTitle("选择跳板机主机");
         String[] columnNames = {"id", "主机名", "ip", "备注"};
@@ -33,7 +36,9 @@ public class JumpServerHostInfoChooseDialog extends DialogWrapper implements Jum
         table.setFillsViewportHeight(true);
         table.setRowHeight(32);
         init();
-        jumpServer.beginListHost(host, userName, password, this);
+        jumpServer = new JumpServer(hostInfo);
+        jumpServer.beginListHost(this);
+        Disposer.register(getDisposable(), jumpServer);
     }
 
     @Override

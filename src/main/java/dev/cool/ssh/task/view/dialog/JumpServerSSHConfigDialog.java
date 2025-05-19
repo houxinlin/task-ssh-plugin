@@ -80,7 +80,8 @@ public class JumpServerSSHConfigDialog extends BaseSSHConfigDialog {
         }
 
         assetIpField.addActionListener(e -> {
-            JumpServerHostInfoChooseDialog jumpServerHostInfoChooseDialog = new JumpServerHostInfoChooseDialog(project, hostField.getText(), usernameField.getText(), new String(passwordField.getPassword()));
+            JumpServerHostInfoChooseDialog jumpServerHostInfoChooseDialog =
+                    new JumpServerHostInfoChooseDialog(project, buildHost());
             jumpServerHostInfoChooseDialog.show();
             String selectedHostName = jumpServerHostInfoChooseDialog.getSelectedHostName();
             if (selectedHostName != null) {

@@ -40,10 +40,9 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.*;
 import java.util.List;
-import java.util.Objects;
+import java.util.function.Function;
 
 public class SSHTaskItem extends JPanel {
     private static final String NEW_COLOR_NAME = "NotificationsToolwindow.newNotification.background";
@@ -64,7 +63,7 @@ public class SSHTaskItem extends JPanel {
         AnAction runAction = new AnAction("运行", "运行", Icons.Run) {
             @Override
             public void actionPerformed(AnActionEvent e) {
-                ApplicationManager.getApplication().executeOnPooledThread(new TaskExec(buildProgressTask()));
+                ApplicationManager.getApplication().executeOnPooledThread(new TaskExec(buildProgressTask(executionNode -> true)));
             }
         };
         AnAction deleteAction = new AnAction("删除", "删除", Icons.Delete) {
@@ -322,7 +321,7 @@ public class SSHTaskItem extends JPanel {
                     if (path != null) {
                         Object selectedNode = path.getLastPathComponent();
                         if (selectedNode instanceof DefaultMutableTreeNode node) {
-                            DialogWrapper editorDialog = createEditorDialog(node.getUserObject());
+                            DialogWrapper editorDialog = createEditorDialog(node);
                             if (editorDialog != null) {
                                 e.consume();
                                 editorDialog.show();
@@ -345,17 +344,19 @@ public class SSHTaskItem extends JPanel {
                         TreeUtil.collectSelectedObjects(tree, (path) -> TreeUtil.getLastUserObject(HostInfo.class, path));
 
                 if (!hostInfos.isEmpty()) {
-                    group.add(new AddTaskAction());
+                    group.add(new ExecNodeAnAction());
+                    group.addSeparator();
+                    group.add(new AddTaskAction(hostInfos.get(0)));
                     group.add(new DeleteHostAction());
                     group.add(new EditHostAnAction());
-
                 }
                 List<ExecuteInfo> executeInfos =
                         TreeUtil.collectSelectedObjects(tree, (path) -> TreeUtil.getLastUserObject(ExecuteInfo.class, path));
 
                 if (!executeInfos.isEmpty()) {
-                    group.add(new DeleteTaskAction());
                     group.add(new ExecNodeAnAction());
+                    group.addSeparator();
+                    group.add(new DeleteTaskAction());
                 }
                 ActionPopupMenu popupMenu = ActionManager.getInstance().createActionPopupMenu("TaskView", group);
                 popupMenu.setTargetComponent(tree);
@@ -374,7 +375,19 @@ public class SSHTaskItem extends JPanel {
 
         @Override
         public void actionPerformed(@NotNull AnActionEvent anActionEvent) {
-            buildProgressTask()
+            Set<ExecutionNode> executionNodes = new HashSet<>();
+            for (TreePath collectSelectedPath : TreeUtil.collectSelectedPaths(tree)) {
+                if (collectSelectedPath.getLastPathComponent() instanceof ExecutionNode e) {
+                    executionNodes.add(e);
+                }
+                if (collectSelectedPath.getLastPathComponent() instanceof HostNode node) {
+                    for (int i = 0; i < node.getChildCount(); i++) {
+                        executionNodes.add(((ExecutionNode) node.getChildAt(i)));
+                    }
+                }
+            }
+            List<HostInfoWrapper> hostInfoWrappers = buildProgressTask(executionNodes::contains);
+            ApplicationManager.getApplication().executeOnPooledThread(new TaskExec(hostInfoWrappers));
         }
     }
 
@@ -423,10 +436,13 @@ public class SSHTaskItem extends JPanel {
         }
     }
 
-    private DialogWrapper createEditorDialog(Object object) {
+    private DialogWrapper createEditorDialog(DefaultMutableTreeNode node) {
+        Object object = node.getUserObject();
         if (object instanceof ExecuteInfo executeInfo) {
             if (Objects.equals(executeInfo.getExecuteType(), ExecType.UPLOAD.getExecType())) {
-                return new FileMapChooseDialog(project, executeInfo);
+                FileMapChooseDialog fileMapChooseDialog = new FileMapChooseDialog(project, executeInfo);
+                fileMapChooseDialog.setHostInfo(((HostNode) node.getParent()).getHostInfo());
+                return fileMapChooseDialog;
             }
             if (Objects.equals(executeInfo.getExecuteType(), ExecType.KILL_JAR.getExecType())) {
                 return new KillJarParameterDialog(project, executeInfo);
@@ -464,13 +480,14 @@ public class SSHTaskItem extends JPanel {
     }
 
     private class AddTaskAction extends DefaultActionGroup {
-        public AddTaskAction() {
+        public AddTaskAction(HostInfo hostInfo) {
             super("Add Task", "", AllIcons.General.Add);
             setPopup(true);
             addAll(new AnAction("文件上传", "", AllIcons.Actions.Upload) {
                        @Override
                        public void actionPerformed(@NotNull AnActionEvent e) {
                            FileMapChooseDialog fileMapChooseDialog = new FileMapChooseDialog(e.getProject());
+                           fileMapChooseDialog.setHostInfo(hostInfo);
                            fileMapChooseDialog.show();
                            if (fileMapChooseDialog.isOK()) {
                                File file = new File(fileMapChooseDialog.getLocalPath());
@@ -607,7 +624,7 @@ public class SSHTaskItem extends JPanel {
         config.restore();
     }
 
-    private List<HostInfoWrapper> buildProgressTask() {
+    private List<HostInfoWrapper> buildProgressTask(Function<ExecutionNode, Boolean> filter) {
         DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
         DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
         List<HostInfoWrapper> hosts = new ArrayList<>();
@@ -617,7 +634,8 @@ public class SSHTaskItem extends JPanel {
                 hosts.add(new HostInfoWrapper(hostNode, executeInfoWrappers));
                 for (int j = 0; j < hostNode.getChildCount(); j++) {
                     TreeNode executeNode = hostNode.getChildAt(j);
-                    if (executeNode instanceof ExecutionNode executionNode) {
+                    if (executeNode instanceof ExecutionNode executionNode
+                            && filter.apply(executionNode)) {
                         executionNode.setState(State.WAITING);
                         ExecuteInfoWrapper executeInfoWrapper = new ExecuteInfoWrapper(executionNode, executionNode.getExecuteInfo());
                         executeInfoWrappers.add(executeInfoWrapper);
@@ -738,8 +756,8 @@ public class SSHTaskItem extends JPanel {
         public void actionPerformed(AnActionEvent e) {
             List<Object> objects = TreeUtil.collectSelectedUserObjects(tree);
             if (!objects.isEmpty()) {
-                DialogWrapper editorDialog = createEditorDialog(objects.get(0));
-                if (editorDialog != null) editorDialog.show();
+//                DialogWrapper editorDialog = createEditorDialog(objects.get(0));
+//                if (editorDialog != null) editorDialog.show();
             }
         }
     }

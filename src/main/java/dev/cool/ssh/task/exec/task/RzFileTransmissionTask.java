@@ -143,12 +143,22 @@ public class RzFileTransmissionTask extends BasicTask implements Transfer.Progre
         return false;
     }
 
+    private String[] buildSzCommand(String name) {
+        String osName = System.getProperty("os.name").toLowerCase();
+        if (osName.contains("windows")) {
+            return new String[]{"D:\\app\\lrzsz_0.12.21rc_windows_x86_64\\lrzsz_0.12.21rc_windows_x86_64\\sz.exe", "-b", name};
+        }
+        if (osName.contains("linux")) {
+            return new String[]{"lrzsz-sz", "-b", name};
+        }
+        return new String[]{"sz", "-b", name};
+    }
+
     private void startSzTransfer(OutputStream sshOut, InputStream sshIn, String file) throws IOException {
         File file1 = new File(file);
         String name = file1.getName();
-        String[] command = {"D:\\app\\lrzsz_0.12.21rc_windows_x86_64\\lrzsz_0.12.21rc_windows_x86_64\\sz.exe", "-b", name};
 
-        Process szProcess = new ProcessBuilder().command(command).directory(file1.getParentFile()).start();
+        Process szProcess = new ProcessBuilder().command(buildSzCommand(name)).directory(file1.getParentFile()).start();
         InputStream szIn = szProcess.getInputStream();
         OutputStream szOut = szProcess.getOutputStream();
         Transfer transfer = Transfer.create(szIn, sshOut, file, this);

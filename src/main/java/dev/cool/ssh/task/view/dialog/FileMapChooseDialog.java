@@ -7,16 +7,20 @@ import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import com.intellij.util.ui.JBUI;
 import dev.cool.ssh.task.model.ExecuteInfo;
 import dev.cool.ssh.task.model.FileExecuteInfo;
+import dev.cool.ssh.task.model.HostInfo;
 import dev.cool.ssh.task.utils.JSONUtils;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
 
 public class FileMapChooseDialog extends ExecParameterDialogWrapper {
     private TextFieldWithBrowseButton localPathField;
-    private JTextField remotePathField;
+    private TextFieldWithBrowseButton remotePathField;
+    private HostInfo hostInfo;
 
     private final Project project;
 
@@ -80,7 +84,13 @@ public class FileMapChooseDialog extends ExecParameterDialogWrapper {
 
         // 远程路径输入框
         gbc.gridy = 1;
-        remotePathField = new JTextField();
+        remotePathField = new TextFieldWithBrowseButton(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                LinuxDirectoryChooseDialog linuxDirectoryChooseDialog = new LinuxDirectoryChooseDialog(project, hostInfo);
+                linuxDirectoryChooseDialog.show();
+            }
+        });
         panel.add(remotePathField, gbc);
         localPathField.setPreferredSize(new Dimension(300, localPathField.getPreferredSize().height));
         remotePathField.setPreferredSize(new Dimension(300, remotePathField.getPreferredSize().height));
@@ -113,6 +123,14 @@ public class FileMapChooseDialog extends ExecParameterDialogWrapper {
     protected void init() {
         super.init();
         setSize(750, 200);
+    }
+
+    public HostInfo getHostInfo() {
+        return hostInfo;
+    }
+
+    public void setHostInfo(HostInfo hostInfo) {
+        this.hostInfo = hostInfo;
     }
 
     public String getLocalPath() {

@@ -1,0 +1,109 @@
+package dev.cool.ssh.task.ssh;
+
+import com.intellij.openapi.Disposable;
+import com.intellij.openapi.application.ApplicationManager;
+import com.jcraft.jsch.ChannelShell;
+import com.jcraft.jsch.JSchException;
+import dev.cool.ssh.task.exec.JschFactory;
+import dev.cool.ssh.task.model.FileEntry;
+import dev.cool.ssh.task.model.HostInfo;
+import dev.cool.ssh.task.model.JumpServerHostInfo;
+import dev.cool.ssh.task.utils.JSONUtils;
+import dev.cool.ssh.task.utils.LSParser;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.List;
+
+public class JumpServerDirectoryManager implements Disposable {
+    private final HostInfo hostInfo;
+
+    private volatile InputStream inputStream;
+    private volatile OutputStream outputStream;
+    private volatile ChannelShell channelShell;
+
+    private volatile String prompt;
+
+    private ConnectionListener connectionListener;
+
+    public JumpServerDirectoryManager(HostInfo hostInfo) {
+        this.hostInfo = hostInfo;
+    }
+
+    public void connection(ConnectionListener connectionListener) {
+        this.connectionListener = connectionListener;
+        ApplicationManager.getApplication().executeOnPooledThread(this::doConnection);
+    }
+
+    private void doConnection() {
+        try {
+            channelShell = JschFactory.openChannel(hostInfo);
+            channelShell.connect(3000);
+            inputStream = channelShell.getInputStream();
+            outputStream = channelShell.getOutputStream();
+            JumpServerConnection jumpServerConnection = new JumpServerConnection();
+            prompt = jumpServerConnection.tryConnectAndWait(
+                    inputStream,
+                    outputStream,
+                    JSONUtils.fromJSON(hostInfo.getHostExtJSON(), JumpServerHostInfo.class));
+
+            if (prompt != null && !prompt.isEmpty()) {
+                this.connectionListener.connectionSuccess();
+            }
+        } catch (Exception ignored) {
+            this.connectionListener.connectionFailed();
+        }
+
+    }
+
+    @Override
+    public void dispose() {
+        if (channelShell != null) {
+            channelShell.disconnect();
+            try {
+                channelShell.getSession().disconnect();
+            } catch (JSchException ignored) {
+
+            }
+        }
+    }
+
+    private ByteArrayOutputStream doListFile(String path) {
+        if (outputStream != null) {
+            try {
+                outputStream.write(("ls --color=never -lh " + path + "  \r").getBytes());
+                outputStream.flush();
+                ByteArrayOutputStream result = new ByteArrayOutputStream();
+                byte[] buffer = new byte[2048];
+                while (true) {
+                    int read = inputStream.read(buffer);
+                    if (read == -1) {
+                        return result;
+                    }
+                    result.write(buffer, 0, read);
+                    if (result.toString().endsWith(prompt)) return result;
+                }
+
+            } catch (IOException ignored) {
+
+            }
+        }
+        return null;
+    }
+
+    public List<FileEntry> listFile(String path) {
+        ByteArrayOutputStream byteArrayOutputStream = doListFile(path);
+        if (byteArrayOutputStream != null) {
+            return LSParser.parseLsOutput(byteArrayOutputStream.toString());
+        }
+        return null;
+    }
+
+    public interface ConnectionListener {
+        public void connectionSuccess();
+
+        public void connectionFailed();
+    }
+}
