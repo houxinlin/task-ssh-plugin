@@ -1,20 +1,36 @@
 package dev.cool.ssh.task.view.dialog;
 
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.ui.DialogWrapper;
+import dev.cool.ssh.task.model.ExecuteInfo;
+import dev.cool.ssh.task.model.ScriptParameter;
+import dev.cool.ssh.task.model.SimpleParameter;
+import dev.cool.ssh.task.utils.JSONUtils;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.awt.*;
 
-public class KillJarParameterDialog extends DialogWrapper {
+public class KillJarParameterDialog extends ExecParameterDialogWrapper {
     private JTextField jarNameField;
     private String jarName;
+    private ExecuteInfo executeInfo;
 
-    public KillJarParameterDialog(@Nullable Project project) {
-        super(project);
+    public KillJarParameterDialog(@Nullable Project project, ExecuteInfo executeInfo) {
+        super(project, executeInfo);
+        this.executeInfo = executeInfo;
         setTitle("Kill Jar Process");
         init();
+    }
+
+    public KillJarParameterDialog(@Nullable Project project) {
+        this(project, null);
+    }
+
+    @Override
+    protected String buildExtJSON() {
+        SimpleParameter simpleParameter = new SimpleParameter();
+        simpleParameter.setValue(jarName);
+        return JSONUtils.toJSON(simpleParameter);
     }
 
     @Override
@@ -42,16 +58,20 @@ public class KillJarParameterDialog extends DialogWrapper {
         gbc.gridy = 0;
         panel.add(suffixLabel, gbc);
 
+        if (getExecuteInfo() != null) {
+            SimpleParameter simpleParameter = JSONUtils.fromJSON(getExecuteInfo().getExecuteExtJSON(), SimpleParameter.class);
+            jarNameField.setText(simpleParameter.getValue());
+        }
         return panel;
     }
 
     @Override
     protected void doOKAction() {
-        jarName = jarNameField.getText().trim();
         super.doOKAction();
+
     }
 
     public String getJarName() {
-        return jarName;
+        return jarNameField.getText().trim();
     }
 }

@@ -18,4 +18,8 @@ public class HostNode extends TaskNode {
     public Icon getIcon() {
         return null;
     }
+
+    public HostInfo getHostInfo() {
+        return (HostInfo) getUserObject();
+    }
 }

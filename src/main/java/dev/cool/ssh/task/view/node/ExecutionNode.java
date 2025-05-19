@@ -15,9 +15,18 @@ public abstract class ExecutionNode extends TreeStateNode {
     public abstract String doGetProgressText();
 
     public String getDurationText() {
-        String s = doGetProgressText();
-        return s + (tryCount >= 1 ? "try..." + tryCount : "");
+        String progress = doGetProgressText();
+        StringBuilder sb = new StringBuilder();
+        if (progress != null && !progress.isEmpty()) {
+            sb.append(progress);
+        }
+        if (tryCount >= 1) {
+            if (!sb.isEmpty()) sb.append(" ");
+            sb.append("try...").append(tryCount);
+        }
+        return sb.toString();
     }
+
 
     public ExecuteInfo getExecuteInfo() {
         return executeInfo;

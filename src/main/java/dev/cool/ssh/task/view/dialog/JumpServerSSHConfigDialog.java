@@ -2,11 +2,7 @@ package dev.cool.ssh.task.view.dialog;
 
 import com.google.gson.Gson;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.TextFieldWithBrowseButton;
-import com.intellij.ui.AnimatedIcon;
-import com.intellij.util.ui.JBUI;
-import dev.cool.ssh.task.model.ConnectionTestCallback;
 import dev.cool.ssh.task.model.HostInfo;
 import dev.cool.ssh.task.model.JumpServerHostInfo;
 import org.jetbrains.annotations.Nullable;
@@ -14,140 +10,74 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.awt.*;
 
-public class JumpServerSSHConfigDialog extends DialogWrapper {
-    private JTextField hostField;
-    private JTextField portField;
-    private JTextField usernameField;
-    private JPasswordField passwordField;
+public class JumpServerSSHConfigDialog extends BaseSSHConfigDialog {
     private TextFieldWithBrowseButton assetIpField;
     private JTextField userIdField;
-    private final Project project;
-    private JLabel testLabel;
 
-    public JumpServerSSHConfigDialog(@Nullable Project project) {
-        super(project);
-        this.project = project;
-        init();
+    public JumpServerSSHConfigDialog(@Nullable Project project, HostInfo hostInfo) {
+        super(project, hostInfo);
+        assetIpField = new TextFieldWithBrowseButton();
+        userIdField = new JTextField();
+
         setSize(400, 300);
-        setTitle("SSH Config");
+        init();
+
     }
 
-    public HostInfo buildHost() {
-        HostInfo hostInfo = new HostInfo();
-        hostInfo.setHost(hostField.getText());
-        hostInfo.setPort(Integer.parseInt(portField.getText()));
-        hostInfo.setUsername(usernameField.getText());
-        hostInfo.setPassword(new String(passwordField.getPassword()));
-        hostInfo.setHostType(2);
+    public JumpServerSSHConfigDialog(@Nullable Project project) {
+        this(project, null);
+    }
+
+    @Override
+    protected int getHostType() {
+        return 2;
+    }
+
+    @Override
+    protected void fillExtendFields(HostInfo hostInfo) {
         JumpServerHostInfo jumpServerHostInfo = new JumpServerHostInfo();
         jumpServerHostInfo.setIp(assetIpField.getText());
         jumpServerHostInfo.setUserId(userIdField.getText());
         hostInfo.setHostExtJSON(new Gson().toJson(jumpServerHostInfo));
-        return hostInfo;
-    }
-
-    private void testConnection() {
-        if (testLabel.getIcon() == AnimatedIcon.Default.INSTANCE) {
-            return;
-        }
-        
-        testLabel.setIcon(AnimatedIcon.Default.INSTANCE);
-        
-        HostInfo hostInfo = buildHost();
-        hostInfo.testConnection(project, new ConnectionTestCallback() {
-            @Override
-            public void onSuccess() {
-                testLabel.setIcon(null);
-            }
-
-            @Override
-            public void onError(String errorMessage) {
-                testLabel.setIcon(null);
-            }
-        });
     }
 
     @Override
-    protected @Nullable JComponent createCenterPanel() {
-        JPanel panel = new JPanel(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = JBUI.insets(4, 8);
-        gbc.anchor = GridBagConstraints.WEST;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        panel.add(new JLabel("Host:"), gbc);
-        gbc.gridy++;
-        panel.add(new JLabel("Username:"), gbc);
-        gbc.gridy++;
-        panel.add(new JLabel("Authentication type:"), gbc);
-        gbc.gridy++;
-        panel.add(new JLabel("Password:"), gbc);
-        gbc.gridy++;
+    protected void updateExtendFields(HostInfo hostInfo) {
+        if (hostInfo.getHostExtJSON() != null) {
+            JumpServerHostInfo ext = new Gson().fromJson(hostInfo.getHostExtJSON(), JumpServerHostInfo.class);
+            if (ext != null) {
+                assetIpField.setText(ext.getIp());
+                userIdField.setText(ext.getUserId());
+            }
+        }
+    }
+
+    @Override
+    protected JComponent createCenterPanel() {
+        JPanel panel = (JPanel) super.createCenterPanel();
+        GridBagConstraints gbc = ((GridBagLayout) panel.getLayout()).getConstraints(panel.getComponent(0));
+        gbc.gridy = panel.getComponentCount();
+
+        // 添加跳板机特有的字段
         panel.add(new JLabel("资产ip:"), gbc);
         gbc.gridy++;
         panel.add(new JLabel("用户id:"), gbc);
 
         gbc.gridx = 1;
-        gbc.gridy = 0;
+        gbc.gridy = panel.getComponentCount() - 2;
         gbc.weightx = 1.0;
-        
-        // 创建主机地址和端口的容器面板
-        JPanel hostPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        hostField = new JTextField("101.42.129.143");
-        portField = new JTextField("2222");
-        portField.setPreferredSize(new Dimension(60, hostField.getPreferredSize().height));
-        hostPanel.add(hostField);
-        hostPanel.add(new JLabel(":"));
-        hostPanel.add(portField);
-        panel.add(hostPanel, gbc);
-        
-        gbc.gridy++;
-        usernameField = new JTextField("houxinlin3219");
-        panel.add(usernameField, gbc);
-        gbc.gridy++;
-        JComboBox<String> authTypeCombo = new JComboBox<>(new String[]{"Password", "Public Key"});
-        panel.add(authTypeCombo, gbc);
-        gbc.gridy++;
-        passwordField = new JPasswordField("Hxl495594@@");
-        panel.add(passwordField, gbc);
-        gbc.gridy++;
-        assetIpField = new TextFieldWithBrowseButton();
+
         panel.add(assetIpField, gbc);
         gbc.gridy++;
-        userIdField = new JTextField();
         panel.add(userIdField, gbc);
 
-        // 添加测试连接标签
-        gbc.gridy++;
-        gbc.gridx = 0;
-        gbc.gridwidth = 1;
-        gbc.anchor = GridBagConstraints.WEST;
-        testLabel = new JLabel("测试连接");
-        testLabel.setFont(testLabel.getFont().deriveFont(11f));
-        testLabel.setForeground(new Color(0, 120, 215));
-        testLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        testLabel.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                testConnection();
-            }
-            
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent e) {
-                if (testLabel.getIcon() != AnimatedIcon.Default.INSTANCE) {
-                    testLabel.setForeground(new Color(0, 102, 204));
-                }
-            }
-            
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent e) {
-                if (testLabel.getIcon() != AnimatedIcon.Default.INSTANCE) {
-                    testLabel.setForeground(new Color(0, 120, 215));
-                }
-            }
-        });
-        panel.add(testLabel, gbc);
+        // 默认值
+        if (hostInfo == null) {
+            hostField.setText("101.42.129.143");
+            portField.setText("2222");
+            usernameField.setText("houxinlin3219");
+            passwordField.setText("Hxl495594@@");
+        }
 
         assetIpField.addActionListener(e -> {
             JumpServerHostInfoChooseDialog jumpServerHostInfoChooseDialog = new JumpServerHostInfoChooseDialog(project, hostField.getText(), usernameField.getText(), new String(passwordField.getPassword()));
@@ -157,6 +87,10 @@ public class JumpServerSSHConfigDialog extends DialogWrapper {
                 assetIpField.setText(selectedHostName);
             }
         });
+
+        // 添加测试连接标签
+        addTestConnectionLabel(panel, gbc);
+
         return panel;
     }
 }

@@ -1,7 +1,6 @@
 package dev.cool.ssh.task.view;
 
 import com.intellij.icons.AllIcons;
-import com.intellij.ide.IdeBundle;
 import com.intellij.ide.dnd.*;
 import com.intellij.ide.dnd.aware.DnDAwareTree;
 import com.intellij.ide.ui.UISettings;
@@ -9,20 +8,18 @@ import com.intellij.ide.util.treeView.NodeRenderer;
 import com.intellij.openapi.actionSystem.*;
 import com.intellij.openapi.actionSystem.impl.ActionButton;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.GraphicsConfig;
 import com.intellij.openapi.ui.VerticalFlowLayout;
 import com.intellij.openapi.util.NlsSafe;
 import com.intellij.ui.*;
 import com.intellij.ui.awt.RelativeRectangle;
-import com.intellij.ui.components.panels.OpaquePanel;
 import com.intellij.ui.render.RenderingHelper;
 import com.intellij.ui.tree.ui.DefaultTreeUI;
 import com.intellij.ui.treeStructure.Tree;
-import com.intellij.util.EditSourceOnDoubleClickHandler;
 import com.intellij.util.EditSourceOnEnterKeyHandler;
-import com.intellij.util.ui.EmptyIcon;
 import com.intellij.util.ui.GraphicsUtil;
-import com.intellij.util.ui.ImageUtil;
 import com.intellij.util.ui.UIUtil;
 import com.intellij.util.ui.tree.TreeUtil;
 import dev.cool.ssh.task.common.Icons;
@@ -36,14 +33,15 @@ import dev.cool.ssh.task.storage.TaskStorage;
 import dev.cool.ssh.task.view.dialog.*;
 import dev.cool.ssh.task.view.node.*;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import javax.swing.tree.*;
 import java.awt.*;
-import java.awt.image.BufferedImage;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -54,11 +52,13 @@ public class SSHTaskItem extends JPanel {
     private static final Color COOKIE_ITEM_BACKGROUND = NEW_COLOR;
     private Task task;
     private final Tree tree;
+    private Project project;
     private final RootNode rootNode = new RootNode();
 
 
-    public SSHTaskItem(Task task) {
+    public SSHTaskItem(Task task, Project project) {
         this.task = task;
+        this.project = project;
         this.setLayout(new VerticalFlowLayout());
         JLabel titleLabel = new JLabel(task.getTaskName(), SwingConstants.LEFT);
         AnAction runAction = new AnAction("运行", "运行", Icons.Run) {
@@ -117,135 +117,6 @@ public class SSHTaskItem extends JPanel {
         }
         return hostNode;
     }
-    private BufferedImage createDragImage(TreePath[] paths) {
-        int treeWidth = tree.getWidth();
-        int rowHeight = tree.getRowHeight() > 0 ? tree.getRowHeight() : 20;
-        int totalHeight = rowHeight * paths.length;
-
-        BufferedImage image = new BufferedImage(treeWidth, totalHeight, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2 = image.createGraphics();
-
-        // 绘制背景
-        g2.setColor(new Color(255, 255, 255, 180));
-        g2.fillRect(0, 0, treeWidth, totalHeight);
-
-        // 绘制节点文本
-        for (int i = 0; i < paths.length; i++) {
-            DefaultMutableTreeNode node = (DefaultMutableTreeNode) paths[i].getLastPathComponent();
-            String text = node.toString();
-            g2.setColor(Color.BLACK);
-            g2.setFont(tree.getFont());
-            g2.drawString(text, 10, (i + 1) * rowHeight - 5);
-        }
-
-        g2.dispose();
-        return image;
-    }
-    private boolean isAncestor(DefaultMutableTreeNode node, DefaultMutableTreeNode target) {
-        while (target != null) {
-            if (target == node) return true;
-            target = (DefaultMutableTreeNode) target.getParent();
-        }
-        return false;
-    }
-    private static @NotNull ArrayList<DragImageRow> createDragImageRows(@NotNull JTree tree, @Nullable TreePath @NotNull [] paths) {
-        if (paths == null) {
-        }
-
-        int count = 0;
-        int maxItemsToShow = paths.length < 20 ? paths.length : 10;
-        ArrayList<DragImageRow> dragImageRows = new ArrayList();
-
-        for(TreePath path : paths) {
-            dragImageRows.add(new NodeRow(tree, path));
-            ++count;
-            if (count > maxItemsToShow) {
-                dragImageRows.add(new MoreFilesRow(tree, paths.length - maxItemsToShow));
-                break;
-            }
-        }
-
-        return dragImageRows;
-    }
-    private abstract static class DragImageRow {
-        abstract @NotNull Dimension getSize();
-
-        abstract void paint(@NotNull Graphics2D var1);
-    }
-
-    private static final class NodeRow extends DragImageRow {
-        private final @NotNull JTree tree;
-        private final @Nullable TreePath path;
-        private @Nullable Dimension size;
-
-        NodeRow(@NotNull JTree tree, @Nullable TreePath path) {
-            this.tree = tree;
-            this.path = path;
-        }
-
-        @NotNull Dimension getSize() {
-            Dimension size = this.size;
-            if (size == null) {
-                size = getRenderer(this.tree, this.path).getPreferredSize();
-                this.size = size;
-            }
-
-            return size;
-        }
-
-        void paint(@NotNull Graphics2D g) {
-            Component renderer = getRenderer(this.tree, this.path);
-            renderer.setSize(this.getSize());
-            renderer.paint(g);
-        }
-
-        private static @NotNull Component getRenderer(@NotNull JTree tree, @Nullable TreePath path) {
-            return tree.getCellRenderer().getTreeCellRendererComponent(tree, TreeUtil.getLastUserObject(path), false, false, true, tree.getRowForPath(path), false);
-        }
-    }
-
-    private static final class MoreFilesRow extends DragImageRow {
-        private final @NotNull JLabel moreLabel;
-
-        MoreFilesRow(JTree tree, int moreItemsCount) {
-            this.moreLabel = new JLabel(IdeBundle.message("label.more.files", new Object[]{moreItemsCount}), EmptyIcon.ICON_16, 10);
-            this.moreLabel.setFont(tree.getFont());
-            this.moreLabel.setSize(this.moreLabel.getPreferredSize());
-        }
-
-        @NotNull Dimension getSize() {
-            return this.moreLabel.getSize();
-        }
-
-        void paint(@NotNull Graphics2D g) {
-            this.moreLabel.paint(g);
-        }
-    }
-    private static @NotNull BufferedImage paintDragImageRows(@NotNull JTree tree, @NotNull ArrayList<DragImageRow> dragImageRows) {
-        int totalHeight = 0;
-        int maxWidth = 0;
-
-        for(DragImageRow row : dragImageRows) {
-            Dimension size = row.getSize();
-            maxWidth = Math.max(maxWidth, size.width);
-            totalHeight += size.height;
-        }
-
-        GraphicsConfiguration gc = tree.getGraphicsConfiguration();
-        BufferedImage image = ImageUtil.createImage(gc, maxWidth, totalHeight, 2);
-        Graphics2D g = (Graphics2D)image.getGraphics();
-
-        try {
-            for(DragImageRow row : dragImageRows) {
-                row.paint(g);
-                g.translate(0, row.getSize().height);
-            }
-        } finally {
-            g.dispose();
-        }
-
-        return image;
-    }
 
     private static class DropHighlightTree extends DnDAwareTree {
         public DropHighlightTree(TreeModel model) {
@@ -263,7 +134,6 @@ public class SSHTaskItem extends JPanel {
         tree.setLargeModel(true);
         tree.putClientProperty(AnimatedIcon.ANIMATION_IN_RENDERER_ALLOWED, true);
         tree.putClientProperty(DefaultTreeUI.AUTO_EXPAND_ALLOWED, false);
-        EditSourceOnDoubleClickHandler.install(tree);
         EditSourceOnEnterKeyHandler.install(tree);
         TreeSpeedSearch.installOn(tree).setComparator(new SpeedSearchComparator(false));
         TreeUtil.installActions(tree);
@@ -316,29 +186,47 @@ public class SSHTaskItem extends JPanel {
 
                 DefaultMutableTreeNode target = (DefaultMutableTreeNode) path.getLastPathComponent();
                 DefaultMutableTreeNode source = (DefaultMutableTreeNode) event.getAttachedObject();
-                
-                if (source == null || source == rootNode) {
-                    event.setDropPossible(false, "Cannot move root node");
+
+                if (source == null) {
+                    event.setDropPossible(false, "Invalid source node");
                     return false;
                 }
 
-                if (source.getParent() != target.getParent()) {
-                    event.setDropPossible(false, "Can only move within same level");
+                // 检查是否是ExecutionNode
+                if (!(source instanceof ExecutionNode)) {
+                    event.setDropPossible(false, "Only execution nodes can be dragged");
                     return false;
                 }
 
-                if (source == target) {
-                    event.setDropPossible(false, "Cannot move to itself");
-                    return false;
+                // 检查目标位置
+                if (target instanceof HostNode) {
+                    // 允许拖放到HostNode上
+                    Rectangle bounds = tree.getPathBounds(path);
+                    if (bounds != null) {
+                        event.setHighlighting(new RelativeRectangle(tree, bounds), 1);
+                    }
+                    event.setDropPossible(true, "Drop here to copy execution");
+                    return true;
+                } else if (target instanceof ExecutionNode) {
+                    // 检查是否在同一个HostNode下
+                    DefaultMutableTreeNode sourceParent = (DefaultMutableTreeNode) source.getParent();
+                    DefaultMutableTreeNode targetParent = (DefaultMutableTreeNode) target.getParent();
+
+                    Rectangle bounds = tree.getPathBounds(path);
+                    if (bounds != null) {
+                        event.setHighlighting(new RelativeRectangle(tree, bounds), 1);
+                    }
+
+                    if (sourceParent == targetParent) {
+                        event.setDropPossible(true, "Drop here to reorder");
+                    } else {
+                        event.setDropPossible(true, "Drop here to copy and insert");
+                    }
+                    return true;
                 }
 
-                Rectangle bounds = tree.getPathBounds(path);
-                if (bounds != null) {
-                    event.setHighlighting(new RelativeRectangle(tree, bounds), 1);
-                }
-
-                event.setDropPossible(true, "Drop here");
-                return true;
+                event.setDropPossible(false, "Invalid drop target");
+                return false;
             }
 
             @Override
@@ -349,26 +237,101 @@ public class SSHTaskItem extends JPanel {
 
                 DefaultMutableTreeNode target = (DefaultMutableTreeNode) path.getLastPathComponent();
                 DefaultMutableTreeNode source = (DefaultMutableTreeNode) event.getAttachedObject();
-                
-                if (source == target) return;
 
-                DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
-                DefaultMutableTreeNode parent = (DefaultMutableTreeNode) source.getParent();
+                if (!(source instanceof ExecutionNode)) {
+                    return;
+                }
 
-                // 获取目标位置
-                int targetIndex = parent.getIndex(target);
-                
-                // 移除源节点
-                model.removeNodeFromParent(source);
-                
-                // 插入到新位置
-                model.insertNodeInto(source, parent, targetIndex);
-                
-                // 更新sort字段
-                updateSortValues(parent);
+                if (target instanceof HostNode) {
+                    // 复制到新的HostNode
+                    ExecutionNode sourceNode = (ExecutionNode) source;
+                    HostNode targetHostNode = (HostNode) target;
+
+                    // 克隆ExecuteInfo
+                    ExecuteInfo clonedExecuteInfo = sourceNode.getExecuteInfo().clone();
+
+                    // 设置新的sort值
+                    int maxSort = 0;
+                    for (ExecuteInfo ei : ((HostInfo) targetHostNode.getUserObject()).getExecuteInfos()) {
+                        if (ei.getSort() > maxSort) {
+                            maxSort = ei.getSort();
+                        }
+                    }
+                    clonedExecuteInfo.setSort(maxSort + 1);
+
+                    // 添加到HostInfo
+                    ((HostInfo) targetHostNode.getUserObject()).getExecuteInfos().add(clonedExecuteInfo);
+
+                    // 创建新的ExecutionNode并添加到树中
+                    ExecutionNode newExecNode = createExecuteNode(clonedExecuteInfo);
+                    targetHostNode.add(newExecNode);
+
+                    // 更新树模型
+                    DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
+                    model.nodeStructureChanged(targetHostNode);
+
+                    updateSortValues(target);
+                } else if (target instanceof ExecutionNode) {
+                    // 在同一个HostNode下重新排序或复制到其他HostNode
+                    DefaultMutableTreeNode sourceParent = (DefaultMutableTreeNode) source.getParent();
+                    DefaultMutableTreeNode targetParent = (DefaultMutableTreeNode) target.getParent();
+
+                    if (sourceParent == targetParent) {
+                        // 同一HostNode下重排序
+                        DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
+                        int targetIndex = targetParent.getIndex(target);
+                        model.removeNodeFromParent(source);
+                        model.insertNodeInto(source, targetParent, targetIndex);
+                        updateSortValues(targetParent);
+                    } else {
+                        // 复制到其他HostNode的指定位置
+                        ExecutionNode sourceNode = (ExecutionNode) source;
+                        HostNode targetHostNode = (HostNode) targetParent;
+
+                        // 克隆ExecuteInfo
+                        ExecuteInfo clonedExecuteInfo = sourceNode.getExecuteInfo().clone();
+
+                        // 获取目标位置
+                        int targetIndex = targetHostNode.getIndex(target);
+
+                        // 设置新的sort值
+                        clonedExecuteInfo.setSort(targetIndex);
+
+                        // 添加到HostInfo
+                        ((HostInfo) targetHostNode.getUserObject()).getExecuteInfos().add(targetIndex, clonedExecuteInfo);
+
+                        // 创建新的ExecutionNode并添加到树中
+                        ExecutionNode newExecNode = createExecuteNode(clonedExecuteInfo);
+                        targetHostNode.insert(newExecNode, targetIndex);
+
+                        // 更新树模型
+                        DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
+                        model.nodeStructureChanged(targetHostNode);
+                        updateSortValues(sourceParent);
+                    }
+                    TreeUtil.expandAll(tree);
+                }
             }
         }, tree);
 
+        tree.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    TreePath path = tree.getClosestPathForLocation(e.getX(), e.getY());
+                    if (path != null) {
+                        Object selectedNode = path.getLastPathComponent();
+                        if (selectedNode instanceof DefaultMutableTreeNode node) {
+                            DialogWrapper editorDialog = createEditorDialog(node.getUserObject());
+                            if (editorDialog != null) {
+                                e.consume();
+                                editorDialog.show();
+                            }
+                        }
+                    }
+                }
+            }
+        });
         tree.addMouseListener(new PopupHandler() {
             @Override
             public void invokePopup(Component component, int x, int y) {
@@ -384,12 +347,15 @@ public class SSHTaskItem extends JPanel {
                 if (!hostInfos.isEmpty()) {
                     group.add(new AddTaskAction());
                     group.add(new DeleteHostAction());
+                    group.add(new EditHostAnAction());
+
                 }
                 List<ExecuteInfo> executeInfos =
                         TreeUtil.collectSelectedObjects(tree, (path) -> TreeUtil.getLastUserObject(ExecuteInfo.class, path));
 
                 if (!executeInfos.isEmpty()) {
                     group.add(new DeleteTaskAction());
+                    group.add(new ExecNodeAnAction());
                 }
                 ActionPopupMenu popupMenu = ActionManager.getInstance().createActionPopupMenu("TaskView", group);
                 popupMenu.setTargetComponent(tree);
@@ -398,6 +364,18 @@ public class SSHTaskItem extends JPanel {
             }
         });
         return tree;
+    }
+
+    private class ExecNodeAnAction extends AnAction {
+        public ExecNodeAnAction() {
+            super("Run");
+            getTemplatePresentation().setIcon(Icons.Run);
+        }
+
+        @Override
+        public void actionPerformed(@NotNull AnActionEvent anActionEvent) {
+            buildProgressTask()
+        }
     }
 
     private class DeleteTaskAction extends AnAction {
@@ -445,13 +423,44 @@ public class SSHTaskItem extends JPanel {
         }
     }
 
-    private void addExecuteInfoToHosts(ExecuteInfo executeInfo) {
-        List<HostInfo> hostInfos = TreeUtil.collectSelectedObjects(tree,
-                (path) -> TreeUtil.getLastUserObject(HostInfo.class, path));
-        for (HostInfo hostInfo : hostInfos) {
-            hostInfo.getExecuteInfos().add(executeInfo);
+    private DialogWrapper createEditorDialog(Object object) {
+        if (object instanceof ExecuteInfo executeInfo) {
+            if (Objects.equals(executeInfo.getExecuteType(), ExecType.UPLOAD.getExecType())) {
+                return new FileMapChooseDialog(project, executeInfo);
+            }
+            if (Objects.equals(executeInfo.getExecuteType(), ExecType.KILL_JAR.getExecType())) {
+                return new KillJarParameterDialog(project, executeInfo);
+            }
+            if (Objects.equals(executeInfo.getExecuteType(), ExecType.COMMAND.getExecType())) {
+                return new CommandParameterDialog(project, executeInfo);
+            }
+            if (Objects.equals(executeInfo.getExecuteType(), ExecType.SCRIPT.getExecType())) {
+                return new ScriptPathChooseDialog(project, executeInfo);
+            }
         }
-        loadTaskTree();
+        if (object instanceof HostInfo hostInfo) {
+            if (hostInfo.getHostType() == 2) {
+                return new JumpServerSSHConfigDialog(project, hostInfo);
+            }
+            return new SimpleHostInfoConfigDialog(project, hostInfo);
+        }
+        return null;
+    }
+
+    private void addExecuteInfoToHosts(ExecuteInfo executeInfo) {
+        DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
+        for (TreePath collectSelectedPath : TreeUtil.collectSelectedPaths(tree)) {
+            if (collectSelectedPath.getLastPathComponent() instanceof HostNode hostNode) {
+                ExecuteInfo cloned = executeInfo.clone();
+                hostNode.getHostInfo().getExecuteInfos().add(cloned);
+                // 直接插入到tree
+                ExecutionNode execNode = createExecuteNode(cloned);
+                hostNode.add(execNode);
+                model.nodeStructureChanged(hostNode);
+                updateSortValues(hostNode);
+            }
+        }
+        TreeUtil.expandAll(tree);
     }
 
     private class AddTaskAction extends DefaultActionGroup {
@@ -517,15 +526,15 @@ public class SSHTaskItem extends JPanel {
                     new AnAction("执行脚本", "", Icons.Shell) {
                         @Override
                         public void actionPerformed(AnActionEvent e) {
-                            PathChooseDialog pathChooseDialog = new PathChooseDialog(e.getProject());
-                            pathChooseDialog.show();
-                            if (pathChooseDialog.isOK()) {
+                            ScriptPathChooseDialog scriptPathChooseDialog = new ScriptPathChooseDialog(e.getProject());
+                            scriptPathChooseDialog.show();
+                            if (scriptPathChooseDialog.isOK()) {
                                 ScriptParameter simpleParameter = new ScriptParameter();
-                                simpleParameter.setValue(pathChooseDialog.getPath());
-                                simpleParameter.setExecuteInScriptDir(pathChooseDialog.isExecuteInScriptDir());
+                                simpleParameter.setValue(scriptPathChooseDialog.getPath());
+                                simpleParameter.setExecuteInScriptDir(scriptPathChooseDialog.isExecuteInScriptDir());
                                 ExecuteInfo executeInfo = new ExecuteInfoBuilder()
                                         .executeType(ExecType.SCRIPT.getExecType())
-                                        .executeName("执行脚本 " + pathChooseDialog.getPath())
+                                        .executeName("执行脚本 " + scriptPathChooseDialog.getPath())
                                         .executeExtJSON(simpleParameter)
                                         .build();
                                 addExecuteInfoToHosts(executeInfo);
@@ -569,16 +578,16 @@ public class SSHTaskItem extends JPanel {
     private void loadTaskTree() {
         DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
         rootNode.removeAllChildren();
-        
+
         // 根据sort排序HostInfo
-        task.getHosts().sort((a, b) -> Integer.compare(a.getSort(), b.getSort()));
-        
+        task.getHosts().sort(Comparator.comparingInt(HostInfo::getSort));
+
         for (HostInfo host : task.getHosts()) {
             // 根据sort排序ExecuteInfo
-            host.getExecuteInfos().sort((a, b) -> Integer.compare(a.getSort(), b.getSort()));
+            host.getExecuteInfos().sort(Comparator.comparingInt(ExecuteInfo::getSort));
             rootNode.add(createMutableTreeNode(host));
         }
-        
+
         model.nodeChanged(rootNode);
         model.nodeStructureChanged(rootNode);
         TreeUtil.expandAll(tree);
@@ -627,7 +636,6 @@ public class SSHTaskItem extends JPanel {
         private int myDurationRightInset;
 
 
-
         @Override
         public void customizeCellRenderer(@NotNull JTree tree, @NlsSafe Object value, boolean selected, boolean expanded, boolean leaf, int row, boolean hasFocus) {
             super.customizeCellRenderer(tree, value, selected, expanded, leaf, row, hasFocus);
@@ -645,7 +653,7 @@ public class SSHTaskItem extends JPanel {
             if (node instanceof ExecutionNode executionNode) {
                 setIcon(executionNode.getState().getIcon());
                 this.myDurationText = executionNode.getDurationText();
-                if (this.myDurationText != null) {
+                if (this.myDurationText != null && !this.myDurationText.isEmpty()) {
                     FontMetrics metrics = this.getFontMetrics(RelativeFont.SMALL.derive(this.getFont()));
                     this.myDurationWidth = metrics.stringWidth(this.myDurationText);
                     this.myDurationLeftInset = metrics.getHeight() / 4;
@@ -720,5 +728,21 @@ public class SSHTaskItem extends JPanel {
             }
         }
     }
+
+    private class EditHostAnAction extends AnAction {
+        public EditHostAnAction() {
+            super("Edit", "Edit", AllIcons.Actions.Edit);
+        }
+
+        @Override
+        public void actionPerformed(AnActionEvent e) {
+            List<Object> objects = TreeUtil.collectSelectedUserObjects(tree);
+            if (!objects.isEmpty()) {
+                DialogWrapper editorDialog = createEditorDialog(objects.get(0));
+                if (editorDialog != null) editorDialog.show();
+            }
+        }
+    }
+
 
 }

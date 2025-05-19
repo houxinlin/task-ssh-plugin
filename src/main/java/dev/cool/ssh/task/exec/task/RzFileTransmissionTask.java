@@ -146,7 +146,7 @@ public class RzFileTransmissionTask extends BasicTask implements Transfer.Progre
     private void startSzTransfer(OutputStream sshOut, InputStream sshIn, String file) throws IOException {
         File file1 = new File(file);
         String name = file1.getName();
-        String[] command = {"lrzsz-sz", "-b", name};
+        String[] command = {"D:\\app\\lrzsz_0.12.21rc_windows_x86_64\\lrzsz_0.12.21rc_windows_x86_64\\sz.exe", "-b", name};
 
         Process szProcess = new ProcessBuilder().command(command).directory(file1.getParentFile()).start();
         InputStream szIn = szProcess.getInputStream();

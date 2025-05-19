@@ -1,45 +1,28 @@
-package dev.cool.ssh.task.view.dialog;
+package dev.cool.ssh.task.view;
 
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import com.intellij.util.ui.JBUI;
-import dev.cool.ssh.task.model.ExecuteInfo;
-import dev.cool.ssh.task.model.FileExecuteInfo;
-import dev.cool.ssh.task.utils.JSONUtils;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.awt.*;
-import java.io.File;
 
-public class FileMapChooseDialog extends ExecParameterDialogWrapper {
+public class FileMapSelectorDialog extends DialogWrapper {
     private TextFieldWithBrowseButton localPathField;
     private JTextField remotePathField;
 
-    private final Project project;
+    private Project project;
 
-
-    public FileMapChooseDialog(@Nullable Project project) {
-        this(project, null);
-
-    }
-
-    public FileMapChooseDialog(@Nullable Project project, ExecuteInfo executeInfo) {
-        super(project, executeInfo);
+    public FileMapSelectorDialog(@Nullable Project project) {
+        super(project);
         this.project = project;
         setSize(750, 200);
         init();
         setTitle("文件映射选择");
-    }
-
-    @Override
-    protected String buildExtJSON() {
-        FileExecuteInfo fileExecuteInfo = new FileExecuteInfo();
-        fileExecuteInfo.setLocalPath(getLocalPath());
-        fileExecuteInfo.setRemotePath(getRemotePath());
-        return JSONUtils.toJSON(fileExecuteInfo);
     }
 
     @Override
@@ -86,23 +69,9 @@ public class FileMapChooseDialog extends ExecParameterDialogWrapper {
         remotePathField.setPreferredSize(new Dimension(300, remotePathField.getPreferredSize().height));
 
         panel.setPreferredSize(new Dimension(700, 120));
-
-        if (getExecuteInfo() != null) {
-            FileExecuteInfo fileExecuteInfo = JSONUtils.fromJSON(getExecuteInfo().getExecuteExtJSON(), FileExecuteInfo.class);
-            localPathField.setText(fileExecuteInfo.getLocalPath());
-            remotePathField.setText(fileExecuteInfo.getRemotePath());
-        }
         return panel;
     }
 
-    @Override
-    protected void doOKAction() {
-        super.doOKAction();
-        if (getExecuteInfo() != null) {
-            getExecuteInfo().setExecuteName("Upload " + new File(localPathField.getText()).getName());
-
-        }
-    }
 
     @Override
     public JComponent getPreferredFocusedComponent() {

@@ -1,22 +1,34 @@
 package dev.cool.ssh.task.view.dialog;
 
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.ui.DialogWrapper;
+import dev.cool.ssh.task.model.ExecuteInfo;
+import dev.cool.ssh.task.model.ScriptParameter;
+import dev.cool.ssh.task.utils.JSONUtils;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.awt.*;
 
-public class PathChooseDialog extends DialogWrapper {
+public class ScriptPathChooseDialog extends ExecParameterDialogWrapper {
     private JTextField pathField;
     private JCheckBox executeInScriptDirCheckBox;
-    private String path;
-    private boolean executeInScriptDir;
 
-    public PathChooseDialog(@Nullable Project project) {
-        super(project);
+    public ScriptPathChooseDialog(@Nullable Project project, ExecuteInfo executeInfo) {
+        super(project, executeInfo);
         setTitle("选择路径");
         init();
+    }
+
+    public ScriptPathChooseDialog(@Nullable Project project) {
+        this(project, null);
+
+    }
+
+    @Override
+    protected String buildExtJSON() {
+        ScriptParameter simpleParameter = new ScriptParameter();
+        simpleParameter.setValue(getPath());
+        return JSONUtils.toJSON(simpleParameter);
     }
 
     @Override
@@ -38,21 +50,24 @@ public class PathChooseDialog extends DialogWrapper {
         executeInScriptDirCheckBox.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
         panel.add(executeInScriptDirCheckBox, BorderLayout.CENTER);
 
+        if (getExecuteInfo() != null) {
+            ScriptParameter scriptParameter = JSONUtils.fromJSON(getExecuteInfo().getExecuteExtJSON(), ScriptParameter.class);
+            pathField.setText(scriptParameter.getValue());
+            executeInScriptDirCheckBox.setSelected(scriptParameter.isExecuteInScriptDir());
+        }
         return panel;
     }
 
     @Override
     protected void doOKAction() {
-        path = pathField.getText().trim();
-        executeInScriptDir = executeInScriptDirCheckBox.isSelected();
         super.doOKAction();
     }
 
     public String getPath() {
-        return path;
+        return pathField.getText().trim();
     }
 
     public boolean isExecuteInScriptDir() {
-        return executeInScriptDir;
+        return executeInScriptDirCheckBox.isSelected();
     }
 }

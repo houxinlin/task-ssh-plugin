@@ -14,6 +14,6 @@ public class SSHTaskWindow implements ToolWindowFactory, DumbAware {
         toolWindow.getContentManager()
                 .addContent(toolWindow.getContentManager()
                         .getFactory()
-                        .createContent(new JBScrollPane(new SSHTaskView()), "", true));
+                        .createContent(new JBScrollPane(new SSHTaskView(project)), "", true));
     }
 }

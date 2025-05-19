@@ -12,6 +12,10 @@ public class ExecuteInfoWrapper {
         this.executeInfo = executeInfo;
     }
 
+    public ExecuteInfo getExecuteInfo() {
+        return executeInfo;
+    }
+
     public ExecutionNode getNode() {
         return node;
     }

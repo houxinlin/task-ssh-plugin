@@ -1,6 +1,6 @@
 package dev.cool.ssh.task.model;
 
-public class ExecuteInfo {
+public class ExecuteInfo implements Cloneable {
     private int sort;
     private int executeType;
     private String executeExtJSON;
@@ -36,5 +36,15 @@ public class ExecuteInfo {
 
     public void setExecuteName(String executeName) {
         this.executeName = executeName;
+    }
+
+    @Override
+    public ExecuteInfo clone() {
+        ExecuteInfo executeInfo = new ExecuteInfo();
+        executeInfo.setSort(sort);
+        executeInfo.setExecuteType(executeType);
+        executeInfo.setExecuteExtJSON(executeExtJSON);
+        executeInfo.setExecuteName(executeName);
+        return executeInfo;
     }
 }

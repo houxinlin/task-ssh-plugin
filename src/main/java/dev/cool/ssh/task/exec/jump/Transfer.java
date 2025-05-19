@@ -46,7 +46,6 @@ public class Transfer implements Runnable {
 
         long sendTotal = 0;
         long size = Files.size(Paths.get(file));
-        System.out.println(size);
         byte[] buffer = new byte[1024];
         int read;
         ByteArrayOutputStream cache = null;
@@ -71,8 +70,6 @@ public class Transfer implements Runnable {
                     nextPackSize += 6;
                     while (sendTotal != size && byteArray.length >= nextPackSize) {
                         sendTotal += nextPackSize - 6;
-
-                        System.out.println(sendTotal);
                         cache.reset();
                         cache.write(Arrays.copyOfRange(byteArray, (int) nextPackSize, byteArray.length));
                         byteArray = cache.toByteArray();

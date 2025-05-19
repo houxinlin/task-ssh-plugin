@@ -11,9 +11,8 @@ import dev.cool.ssh.task.exec.JschFactory;
 import dev.cool.ssh.task.exec.wrapper.ExecuteInfoWrapper;
 import dev.cool.ssh.task.model.FileExecuteInfo;
 import dev.cool.ssh.task.model.HostInfo;
-import dev.cool.ssh.task.model.ScriptParameter;
 import dev.cool.ssh.task.model.SimpleParameter;
-import dev.cool.ssh.task.utils.JSONUtils;
+import dev.cool.ssh.task.utils.ExecUtils;
 import dev.cool.ssh.task.view.node.ProgressExecuteNode;
 import org.jetbrains.annotations.NotNull;
 
@@ -57,7 +56,6 @@ public class SimpleTaskFactory {
             while ((line = reader.readLine()) != null) {
                 System.out.println(line);
             }
-
             // 读取错误输出
             java.io.BufferedReader errReader = new java.io.BufferedReader(new java.io.InputStreamReader(err));
             while ((line = errReader.readLine()) != null) {
@@ -77,20 +75,6 @@ public class SimpleTaskFactory {
         }
     }
 
-    public static String getLinuxParentPath(String linuxPath) {
-        if (linuxPath == null || linuxPath.isEmpty()) {
-            return null;
-        }
-        String path = linuxPath.endsWith("/") && linuxPath.length() > 1
-                ? linuxPath.substring(0, linuxPath.length() - 1)
-                : linuxPath;
-
-        int lastSlashIndex = path.lastIndexOf('/');
-        if (lastSlashIndex <= 0) {
-            return null;
-        }
-        return path.substring(0, lastSlashIndex);
-    }
 
     private static class CommandTask implements ITask {
         @Override
@@ -103,14 +87,7 @@ public class SimpleTaskFactory {
     private static class ScriptExecuteTask implements ITask {
         @Override
         public void execute(ExecContext execContext) throws Exception {
-
-            StringBuilder command = new StringBuilder();
-            ScriptParameter scriptParameter = JSONUtils.fromJSON(execContext.getExecuteInfoWrapper().getExecuteExtJSON(), ScriptParameter.class);
-            if (scriptParameter.isExecuteInScriptDir()) {
-                command.append("cd ").append(getLinuxParentPath(scriptParameter.getValue())).append(" && ");
-            }
-            command.append("bash ").append(scriptParameter.getValue());
-            execCommand(command.toString(), execContext.getHostInfo());
+            execCommand(ExecUtils.buildExecCmd(execContext.getExecuteInfoWrapper().getExecuteInfo()), execContext.getHostInfo());
         }
     }
 

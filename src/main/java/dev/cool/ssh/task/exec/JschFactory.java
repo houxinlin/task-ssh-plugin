@@ -1,10 +1,6 @@
 package dev.cool.ssh.task.exec;
 
-import com.jcraft.jsch.ChannelExec;
-import com.jcraft.jsch.ChannelShell;
-import com.jcraft.jsch.ChannelSftp;
-import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.Session;
+import com.jcraft.jsch.*;
 import dev.cool.ssh.task.model.HostInfo;
 
 public class JschFactory {
@@ -15,6 +11,7 @@ public class JschFactory {
         session.setConfig("StrictHostKeyChecking", "no");
         session.connect();
         ChannelShell channel = (ChannelShell) session.openChannel("shell");
+        channel.setPty(true);
         return channel;
     }
 

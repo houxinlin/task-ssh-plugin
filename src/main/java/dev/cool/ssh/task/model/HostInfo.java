@@ -24,13 +24,11 @@ public class HostInfo {
         ApplicationManager.getApplication().executeOnPooledThread(() -> {
             try {
                 ChannelShell channel = JschFactory.openChannel(this);
-                if (channel != null) {
-                    channel.disconnect();
-                    SwingUtilities.invokeLater(() -> {
-                        Messages.showInfoMessage(project, "连接成功！", "成功");
-                        callback.onSuccess();
-                    });
-                }
+                channel.disconnect();
+                SwingUtilities.invokeLater(() -> {
+                    Messages.showInfoMessage(project, "连接成功！", "成功");
+                    callback.onSuccess();
+                });
             } catch (Exception e) {
                 SwingUtilities.invokeLater(() -> {
                     Messages.showErrorDialog(project, "连接失败：" + e.getMessage(), "错误");

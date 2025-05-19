@@ -1,20 +1,32 @@
 package dev.cool.ssh.task.view.dialog;
 
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.ui.DialogWrapper;
+import dev.cool.ssh.task.model.ExecuteInfo;
+import dev.cool.ssh.task.model.SimpleParameter;
+import dev.cool.ssh.task.utils.JSONUtils;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.awt.*;
 
-public class CommandParameterDialog extends DialogWrapper {
+public class CommandParameterDialog extends ExecParameterDialogWrapper {
     private JTextField commandField;
-    private String command;
 
-    public CommandParameterDialog(@Nullable Project project) {
-        super(project);
+    public CommandParameterDialog(@Nullable Project project, ExecuteInfo executeInfo) {
+        super(project, executeInfo);
         setTitle("执行命令");
         init();
+    }
+
+    public CommandParameterDialog(@Nullable Project project) {
+        this(project, null);
+    }
+
+    @Override
+    protected String buildExtJSON() {
+        SimpleParameter simpleParameter = new SimpleParameter();
+        simpleParameter.setValue(commandField.getText().trim());
+        return JSONUtils.toJSON(simpleParameter);
     }
 
     @Override
@@ -31,16 +43,14 @@ public class CommandParameterDialog extends DialogWrapper {
         promptLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 2));
         panel.add(promptLabel, BorderLayout.WEST);
 
+        if (getExecuteInfo() != null) {
+            SimpleParameter scriptParameter = JSONUtils.fromJSON(getExecuteInfo().getExecuteExtJSON(), SimpleParameter.class);
+            commandField.setText(scriptParameter.getValue());
+        }
         return panel;
     }
 
-    @Override
-    protected void doOKAction() {
-        command = commandField.getText().trim();
-        super.doOKAction();
-    }
-
     public String getCommand() {
-        return command;
+        return commandField.getText().trim();
     }
 }
