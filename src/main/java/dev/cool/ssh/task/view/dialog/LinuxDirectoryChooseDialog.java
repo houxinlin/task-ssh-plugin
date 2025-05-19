@@ -2,9 +2,9 @@ package dev.cool.ssh.task.view.dialog;
 
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
+import com.intellij.openapi.util.Disposer;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.treeStructure.SimpleTree;
-import com.intellij.util.ui.tree.TreeUtil;
 import dev.cool.ssh.task.model.FileEntry;
 import dev.cool.ssh.task.model.HostInfo;
 import dev.cool.ssh.task.ssh.JumpServerDirectoryManager;
@@ -28,6 +28,7 @@ public class LinuxDirectoryChooseDialog extends DialogWrapper implements JumpSer
         setTitle("Choose Linux Directory");
         initTree();
         init();
+        Disposer.register(getDisposable(), jumpServerDirectoryManager);
         jumpServerDirectoryManager.connection(this);
     }
 
