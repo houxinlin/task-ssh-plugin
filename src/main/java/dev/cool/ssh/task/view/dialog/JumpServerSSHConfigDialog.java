@@ -11,8 +11,8 @@ import javax.swing.*;
 import java.awt.*;
 
 public class JumpServerSSHConfigDialog extends BaseSSHConfigDialog {
-    private TextFieldWithBrowseButton assetIpField;
-    private JTextField userIdField;
+    private final TextFieldWithBrowseButton assetIpField;
+    private final JTextField userIdField;
 
     public JumpServerSSHConfigDialog(@Nullable Project project, HostInfo hostInfo) {
         super(project, hostInfo);

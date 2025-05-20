@@ -94,7 +94,7 @@ public abstract class BaseSSHConfigDialog extends DialogWrapper {
         JPanel hostPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         hostField = new JTextField();
         hostField.setPreferredSize(new Dimension(280, hostField.getPreferredSize().height));
-        portField = new JTextField();
+        portField = new JTextField("22");
         portField.setPreferredSize(new Dimension(60, hostField.getPreferredSize().height));
         hostPanel.add(hostField);
         hostPanel.add(new JLabel(":"));

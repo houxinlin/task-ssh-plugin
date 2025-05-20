@@ -12,9 +12,8 @@ public class SimpleHostInfoConfigDialog extends BaseSSHConfigDialog {
 
     public SimpleHostInfoConfigDialog(@Nullable Project project, HostInfo hostInfo) {
         super(project, hostInfo);
-        setSize(400, 200);
+        setSize(400, 300);
         init();
-
     }
 
     public SimpleHostInfoConfigDialog(@Nullable Project project) {

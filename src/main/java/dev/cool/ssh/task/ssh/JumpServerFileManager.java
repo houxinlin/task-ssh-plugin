@@ -1,6 +1,5 @@
 package dev.cool.ssh.task.ssh;
 
-import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.jcraft.jsch.ChannelShell;
 import com.jcraft.jsch.JSchException;
@@ -17,22 +16,21 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
 
-public class JumpServerDirectoryManager implements Disposable {
+public class JumpServerFileManager implements FileSystemManager {
     private final HostInfo hostInfo;
-
     private volatile InputStream inputStream;
     private volatile OutputStream outputStream;
     private volatile ChannelShell channelShell;
-
     private volatile String prompt;
 
     private ConnectionListener connectionListener;
 
-    public JumpServerDirectoryManager(HostInfo hostInfo) {
+    public JumpServerFileManager(HostInfo hostInfo) {
         this.hostInfo = hostInfo;
     }
 
-    public void connection(ConnectionListener connectionListener) {
+    @Override
+    public void connectFileSystem(ConnectionListener connectionListener) {
         this.connectionListener = connectionListener;
         ApplicationManager.getApplication().executeOnPooledThread(this::doConnection);
     }
@@ -101,9 +99,5 @@ public class JumpServerDirectoryManager implements Disposable {
         return null;
     }
 
-    public interface ConnectionListener {
-        public void connectionSuccess();
 
-        public void connectionFailed();
-    }
 }

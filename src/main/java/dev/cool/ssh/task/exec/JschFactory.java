@@ -32,7 +32,7 @@ public class JschFactory {
         session.setConfig("StrictHostKeyChecking", "no");
         session.connect();
         ChannelSftp channel = (ChannelSftp) session.openChannel("sftp");
-        channel.connect();
+        channel.connect(3000);
         return channel;
     }
 }

@@ -7,7 +7,10 @@ import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.treeStructure.SimpleTree;
 import dev.cool.ssh.task.model.FileEntry;
 import dev.cool.ssh.task.model.HostInfo;
-import dev.cool.ssh.task.ssh.JumpServerDirectoryManager;
+import dev.cool.ssh.task.ssh.ConnectionListener;
+import dev.cool.ssh.task.ssh.FileSystemManager;
+import dev.cool.ssh.task.ssh.JumpServerFileManager;
+import dev.cool.ssh.task.ssh.SimpleFileSystemManager;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
@@ -15,21 +18,22 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import java.util.List;
 
-public class LinuxDirectoryChooseDialog extends DialogWrapper implements JumpServerDirectoryManager.ConnectionListener {
-    private JumpServerDirectoryManager jumpServerDirectoryManager;
+public class LinuxDirectoryChooseDialog extends DialogWrapper implements ConnectionListener {
+    private final FileSystemManager fileSystemManager;
     private SimpleTree directoryTree;
     private DefaultTreeModel treeModel;
     private DefaultMutableTreeNode rootNode;
 
     public LinuxDirectoryChooseDialog(@Nullable Project project, HostInfo hostInfo) {
         super(project);
-        jumpServerDirectoryManager = new JumpServerDirectoryManager(hostInfo);
+        fileSystemManager = hostInfo.getHostType() == 2 ?
+                new JumpServerFileManager(hostInfo) : new SimpleFileSystemManager(hostInfo);
         setSize(400, 600);
         setTitle("Choose Linux Directory");
         initTree();
         init();
-        Disposer.register(getDisposable(), jumpServerDirectoryManager);
-        jumpServerDirectoryManager.connection(this);
+        Disposer.register(getDisposable(), fileSystemManager);
+        fileSystemManager.connectFileSystem(this);
     }
 
     private void initTree() {
@@ -80,7 +84,7 @@ public class LinuxDirectoryChooseDialog extends DialogWrapper implements JumpSer
         treeModel.reload(parentNode);
 
         com.intellij.openapi.application.ApplicationManager.getApplication().executeOnPooledThread(() -> {
-            List<FileEntry> files = jumpServerDirectoryManager.listFile(path);
+            List<FileEntry> files = fileSystemManager.listFile(path);
             if (files != null) {
                 SwingUtilities.invokeLater(() -> {
                     parentNode.removeAllChildren();
