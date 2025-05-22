@@ -1,21 +1,28 @@
 package dev.cool.ssh.task.view.dialog;
 
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import dev.cool.ssh.task.model.ExecuteInfo;
 import dev.cool.ssh.task.model.ScriptParameter;
 import dev.cool.ssh.task.utils.JSONUtils;
+import dev.cool.ssh.task.utils.Utils;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 public class ScriptPathChooseDialog extends ExecParameterDialogWrapper {
-    private JTextField pathField;
+    private TextFieldWithBrowseButton pathField;
     private JCheckBox executeInScriptDirCheckBox;
+    private Project project;
 
     public ScriptPathChooseDialog(@Nullable Project project, ExecuteInfo executeInfo) {
         super(project, executeInfo);
-        setTitle("选择路径");
+        this.project = project;
+        setTitle("Select Script Path");
+        setSize(750, 200);
         init();
     }
 
@@ -38,8 +45,13 @@ public class ScriptPathChooseDialog extends ExecParameterDialogWrapper {
 
         // 创建路径输入框和标签的容器
         JPanel pathPanel = new JPanel(new BorderLayout(5, 0));
-        pathField = new JTextField(40);
-        JLabel pathLabel = new JLabel("路径: ");
+        pathField = new TextFieldWithBrowseButton(e -> {
+            String path = Utils.getPath(false, project, getHostInfo());
+            if (path != null) {
+                pathField.setText(path);
+            }
+        });
+        JLabel pathLabel = new JLabel("Path: ");
         pathLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 5));
         pathPanel.add(pathLabel, BorderLayout.WEST);
         pathPanel.add(pathField, BorderLayout.CENTER);

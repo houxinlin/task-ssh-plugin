@@ -1,11 +1,11 @@
 package dev.cool.ssh.task.ssh;
 
 import com.jcraft.jsch.ChannelSftp;
-import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.SftpException;
 import dev.cool.ssh.task.exec.JschFactory;
 import dev.cool.ssh.task.model.FileEntry;
 import dev.cool.ssh.task.model.HostInfo;
+import dev.cool.ssh.task.utils.ExecUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,11 +47,6 @@ public class SimpleFileSystemManager implements FileSystemManager {
 
     @Override
     public void dispose() {
-        channelSftp.disconnect();
-        try {
-            channelSftp.getSession().disconnect();
-        } catch (JSchException ignored) {
-
-        }
+        ExecUtils.closeChannel(channelSftp);
     }
 }

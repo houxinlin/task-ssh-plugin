@@ -4,10 +4,12 @@ import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
 import dev.cool.ssh.task.model.ExecuteInfo;
+import dev.cool.ssh.task.model.HostInfo;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class ExecParameterDialogWrapper extends DialogWrapper {
     private ExecuteInfo executeInfo;
+    private HostInfo hostInfo;
 
     public ExecParameterDialogWrapper(@Nullable Project project) {
         this(project, null);
@@ -26,6 +28,18 @@ public abstract class ExecParameterDialogWrapper extends DialogWrapper {
         if (executeInfo != null) {
             ApplicationManager.getApplication().executeOnPooledThread(() -> executeInfo.setExecuteExtJSON(buildExtJSON()));
         }
+    }
+
+    public void setExecuteInfo(ExecuteInfo executeInfo) {
+        this.executeInfo = executeInfo;
+    }
+
+    public HostInfo getHostInfo() {
+        return hostInfo;
+    }
+
+    public void setHostInfo(HostInfo hostInfo) {
+        this.hostInfo = hostInfo;
     }
 
     public ExecuteInfo getExecuteInfo() {

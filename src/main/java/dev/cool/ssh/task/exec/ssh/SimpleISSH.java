@@ -1,5 +1,6 @@
 package dev.cool.ssh.task.exec.ssh;
 
+import dev.cool.ssh.task.exec.ExecListener;
 import dev.cool.ssh.task.exec.ISSH;
 import dev.cool.ssh.task.exec.SimpleExecContext;
 import dev.cool.ssh.task.exec.factory.TaskFactory;
@@ -12,10 +13,11 @@ public class SimpleISSH extends BasicSSH implements ISSH {
     }
 
     @Override
-    public void execute(ExecuteInfoWrapper executeInfo) {
+    public void execute(ExecuteInfoWrapper executeInfo, ExecListener execListener) {
         try {
             SimpleExecContext simpleExecContext = new SimpleExecContext(getHostInfo());
             simpleExecContext.setExecuteInfoWrapper(executeInfo);
+            simpleExecContext.setExecListener(execListener);
             TaskFactory.getTask(executeInfo, this).execute(simpleExecContext);
         } catch (Exception e) {
             throw new RuntimeException(e);

@@ -38,8 +38,9 @@ public class SimpleTaskFactory {
     }
 
 
-    private static void execCommand(String command, HostInfo hostInfo) throws Exception {
+    private static void execCommand(String command, HostInfo hostInfo, ExecContext execContext) throws Exception {
         ChannelExec channelExec = JschFactory.openExecChannel(hostInfo);
+        execContext.getExecuteInfoWrapper().getNode().setChannel(channelExec);
         try {
             channelExec.setCommand(command);
 
@@ -47,8 +48,6 @@ public class SimpleTaskFactory {
             java.io.InputStream in = channelExec.getInputStream();
             // 获取错误输出
             java.io.InputStream err = channelExec.getErrStream();
-
-            channelExec.connect();
 
             // 读取标准输出
             java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(in));
@@ -67,11 +66,7 @@ public class SimpleTaskFactory {
                 Thread.sleep(100);
             }
         } finally {
-            // 确保通道和会话被正确关闭
-            if (channelExec != null) {
-                channelExec.disconnect();
-                channelExec.getSession().disconnect();
-            }
+            ExecUtils.closeChannel(channelExec);
         }
     }
 
@@ -80,14 +75,14 @@ public class SimpleTaskFactory {
         @Override
         public void execute(ExecContext execContext) throws Exception {
             String command = new Gson().fromJson(execContext.getExecuteInfoWrapper().getExecuteExtJSON(), SimpleParameter.class).getValue();
-            execCommand(command, execContext.getHostInfo());
+            execCommand(command, execContext.getHostInfo(), execContext);
         }
     }
 
     private static class ScriptExecuteTask implements ITask {
         @Override
         public void execute(ExecContext execContext) throws Exception {
-            execCommand(ExecUtils.buildExecCmd(execContext.getExecuteInfoWrapper().getExecuteInfo()), execContext.getHostInfo());
+            execCommand(ExecUtils.buildExecCmd(execContext.getExecuteInfoWrapper().getExecuteInfo()), execContext.getHostInfo(), execContext);
         }
     }
 
@@ -96,7 +91,7 @@ public class SimpleTaskFactory {
         public void execute(ExecContext execContext) throws Exception {
             String value = new Gson().fromJson(execContext.getExecuteInfoWrapper().getExecuteExtJSON(), SimpleParameter.class).getValue();
             String command = "jps -l | grep \" " + value + " \" | awk '{print $1}' | xargs -r kill -9\r";
-            execCommand(command, execContext.getHostInfo());
+            execCommand(command, execContext.getHostInfo(), execContext);
         }
     }
 
@@ -104,7 +99,7 @@ public class SimpleTaskFactory {
         @Override
         public void execute(ExecContext execContext) throws Exception {
             ChannelSftp channelSftp = JschFactory.openSFTP(execContext.getHostInfo());
-
+            execContext.getExecuteInfoWrapper().getNode().setChannel(channelSftp);
             ExecuteInfoWrapper executeInfoWrapper = execContext.getExecuteInfoWrapper();
             FileExecuteInfo fileExecuteInfo = new Gson().fromJson(executeInfoWrapper.getExecuteExtJSON(), FileExecuteInfo.class);
 
@@ -113,8 +108,7 @@ public class SimpleTaskFactory {
 
             channelSftp.put(fis, remoteFile, new ProgressMonitor(fileExecuteInfo.getLocalPath(), executeInfoWrapper), ChannelSftp.OVERWRITE);
 
-            channelSftp.disconnect();
-            channelSftp.getSession().disconnect();
+            ExecUtils.closeChannel(channelSftp);
             fis.close();
         }
 

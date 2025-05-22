@@ -7,20 +7,17 @@ import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import com.intellij.util.ui.JBUI;
 import dev.cool.ssh.task.model.ExecuteInfo;
 import dev.cool.ssh.task.model.FileExecuteInfo;
-import dev.cool.ssh.task.model.HostInfo;
 import dev.cool.ssh.task.utils.JSONUtils;
+import dev.cool.ssh.task.utils.Utils;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.File;
 
 public class FileMapChooseDialog extends ExecParameterDialogWrapper {
     private TextFieldWithBrowseButton localPathField;
     private TextFieldWithBrowseButton remotePathField;
-    private HostInfo hostInfo;
 
     private final Project project;
 
@@ -84,11 +81,10 @@ public class FileMapChooseDialog extends ExecParameterDialogWrapper {
 
         // 远程路径输入框
         gbc.gridy = 1;
-        remotePathField = new TextFieldWithBrowseButton(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                LinuxDirectoryChooseDialog linuxDirectoryChooseDialog = new LinuxDirectoryChooseDialog(project, hostInfo);
-                linuxDirectoryChooseDialog.show();
+        remotePathField = new TextFieldWithBrowseButton(e -> {
+            String path = Utils.getPath(true, project, getHostInfo());
+            if (path != null) {
+                remotePathField.setText(path);
             }
         });
         panel.add(remotePathField, gbc);
@@ -110,7 +106,6 @@ public class FileMapChooseDialog extends ExecParameterDialogWrapper {
         super.doOKAction();
         if (getExecuteInfo() != null) {
             getExecuteInfo().setExecuteName("Upload " + new File(localPathField.getText()).getName());
-
         }
     }
 
@@ -123,14 +118,6 @@ public class FileMapChooseDialog extends ExecParameterDialogWrapper {
     protected void init() {
         super.init();
         setSize(750, 200);
-    }
-
-    public HostInfo getHostInfo() {
-        return hostInfo;
-    }
-
-    public void setHostInfo(HostInfo hostInfo) {
-        this.hostInfo = hostInfo;
     }
 
     public String getLocalPath() {

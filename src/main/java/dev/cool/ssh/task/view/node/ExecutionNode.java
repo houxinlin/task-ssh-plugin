@@ -1,11 +1,14 @@
 package dev.cool.ssh.task.view.node;
 
 import com.intellij.ui.treeStructure.Tree;
+import com.jcraft.jsch.Channel;
 import dev.cool.ssh.task.model.ExecuteInfo;
 
 public abstract class ExecutionNode extends TreeStateNode {
     private final ExecuteInfo executeInfo;
     public int tryCount;
+    private Channel channel;
+    private boolean cancelled;
 
     public ExecutionNode(ExecuteInfo executeInfo, Tree tree) {
         super(executeInfo, tree);
@@ -27,6 +30,21 @@ public abstract class ExecutionNode extends TreeStateNode {
         return sb.toString();
     }
 
+    public boolean isCancelled() {
+        return cancelled;
+    }
+
+    public void setCancelled(boolean cancelled) {
+        this.cancelled = cancelled;
+    }
+
+    public Channel getChannel() {
+        return channel;
+    }
+
+    public void setChannel(Channel channel) {
+        this.channel = channel;
+    }
 
     public ExecuteInfo getExecuteInfo() {
         return executeInfo;

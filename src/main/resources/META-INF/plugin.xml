@@ -1,21 +1,20 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
     <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
-    <id>dev.cool.task.ISSH.task-ISSH</id>
+    <id>dev.cool.task.ssh</id>
 
     <!-- Public plugin name should be written in Title Case.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
-    <name>Task-ISSH</name>
+    <name>Cool Request - SSH Task</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor url="https://www.yourcompany.com">YourCompany</vendor>
+    <vendor url="https://www.yourcompany.com">Cool Request</vendor>
 
-    <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
-         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
-    Enter short description for your plugin here.<br>
-    <em>most HTML tags may be used</em>
-  ]]></description>
+    实用的自动化运维工具，支持批量执行文件上传与命令操作。<br>
+    完美兼容 JumpServer，助力高效管理多台服务器。<br>
+    ]]></description>
+
 
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
@@ -24,7 +23,7 @@
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow id="SSH Task" secondary="true" icon="/icons/pluginIcon.svg" anchor="right"
+        <toolWindow  id="SSH Task" secondary="true" icon="/icons/pluginIcon.svg" anchor="right"
                     factoryClass="dev.cool.ssh.task.toolwindow.SSHTaskWindow"/>
     </extensions>
 </idea-plugin>

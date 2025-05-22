@@ -28,15 +28,16 @@ public abstract class BasicTask implements ITask {
         byte[] buffer = new byte[2048];
         Thread.sleep(200);
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        System.out.println("waitUntilFinished：" + execContext.getSshPrompt());
+        execContext.getExecListener().execOutput(execContext.getExecuteInfoWrapper(), "等待响应:" + execContext.getSshPrompt());
         while (true) {
             int read = execContext.getInputStream().read(buffer);
             if (read == -1) break;
             byteArrayOutputStream.write(buffer, 0, read);
-            String data = new String(buffer, 0, read);
-            if (byteArrayOutputStream.toString().endsWith(execContext.getSshPrompt())) break;
+            String[] lines = byteArrayOutputStream.toString().split("\\R");
+            String lastLine = lines.length > 0 ? lines[lines.length - 1] : "";
+            if (lastLine.contains(execContext.getSshPrompt())) break;
         }
-        System.out.println(byteArrayOutputStream);
+        execContext.getExecListener().execOutput(execContext.getExecuteInfoWrapper(), "响应成功:" + byteArrayOutputStream);
         return byteArrayOutputStream;
     }
 }

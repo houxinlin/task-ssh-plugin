@@ -13,6 +13,8 @@ import dev.cool.ssh.task.view.node.ProgressExecuteNode;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -39,11 +41,12 @@ public class RzFileTransmissionTask extends BasicTask implements Transfer.Progre
             } finally {
                 lock.unlock();
             }
-
         };
         Callable<Exception> listenerRz = () -> {
             FileExecuteInfo fileExecuteInfo = new Gson().fromJson(executeInfo.getExecuteExtJSON(), FileExecuteInfo.class);
             try {
+                if (!Files.exists(Paths.get(fileExecuteInfo.getLocalPath()))) return null;
+                if (fileExecuteInfo.getRemotePath().isEmpty()) return null;
                 if (doExecute(fileExecuteInfo, execContext, statusListener)) return null;
                 throw new ExecuteException("上传失败");
             } catch (Exception e) {
@@ -104,15 +107,6 @@ public class RzFileTransmissionTask extends BasicTask implements Transfer.Progre
 
     @Override
     public void onComplete(Exception exception) {
-        System.out.println("上传完成" + exception);
-    }
-
-    public static String getSecondLine(String input) {
-        if (input == null) {
-            return null;
-        }
-        String[] lines = input.split("\\r?\\n");
-        return lines.length >= 2 ? lines[1] : null;
     }
 
     private static int getCRCount(byte[] bytes) {

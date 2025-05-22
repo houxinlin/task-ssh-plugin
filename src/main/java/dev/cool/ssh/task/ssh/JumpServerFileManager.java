@@ -7,6 +7,7 @@ import dev.cool.ssh.task.exec.JschFactory;
 import dev.cool.ssh.task.model.FileEntry;
 import dev.cool.ssh.task.model.HostInfo;
 import dev.cool.ssh.task.model.JumpServerHostInfo;
+import dev.cool.ssh.task.utils.ExecUtils;
 import dev.cool.ssh.task.utils.JSONUtils;
 import dev.cool.ssh.task.utils.LSParser;
 
@@ -38,7 +39,6 @@ public class JumpServerFileManager implements FileSystemManager {
     private void doConnection() {
         try {
             channelShell = JschFactory.openChannel(hostInfo);
-            channelShell.connect(3000);
             inputStream = channelShell.getInputStream();
             outputStream = channelShell.getOutputStream();
             JumpServerConnection jumpServerConnection = new JumpServerConnection();
@@ -58,14 +58,7 @@ public class JumpServerFileManager implements FileSystemManager {
 
     @Override
     public void dispose() {
-        if (channelShell != null) {
-            channelShell.disconnect();
-            try {
-                channelShell.getSession().disconnect();
-            } catch (JSchException ignored) {
-
-            }
-        }
+        ExecUtils.closeChannel(channelShell);
     }
 
     private ByteArrayOutputStream doListFile(String path) {
@@ -81,7 +74,10 @@ public class JumpServerFileManager implements FileSystemManager {
                         return result;
                     }
                     result.write(buffer, 0, read);
-                    if (result.toString().endsWith(prompt)) return result;
+
+                    String[] lines = result.toString().split("\\R");
+                    String lastLine = lines.length > 0 ? lines[lines.length - 1] : "";
+                    if (lastLine.contains(prompt)) return result;
                 }
 
             } catch (IOException ignored) {

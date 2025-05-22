@@ -5,6 +5,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
 import com.jcraft.jsch.ChannelShell;
 import dev.cool.ssh.task.exec.JschFactory;
+import dev.cool.ssh.task.utils.ExecUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +25,7 @@ public class HostInfo {
         ApplicationManager.getApplication().executeOnPooledThread(() -> {
             try {
                 ChannelShell channel = JschFactory.openChannel(this);
-                channel.disconnect();
+                ExecUtils.closeChannel(channel);
                 SwingUtilities.invokeLater(() -> {
                     Messages.showInfoMessage(project, "连接成功！", "成功");
                     callback.onSuccess();

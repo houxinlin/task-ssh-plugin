@@ -23,6 +23,7 @@ import com.intellij.util.ui.GraphicsUtil;
 import com.intellij.util.ui.UIUtil;
 import com.intellij.util.ui.tree.TreeUtil;
 import dev.cool.ssh.task.common.Icons;
+import dev.cool.ssh.task.exec.ExecListener;
 import dev.cool.ssh.task.exec.ExecType;
 import dev.cool.ssh.task.exec.State;
 import dev.cool.ssh.task.exec.TaskExec;
@@ -30,6 +31,7 @@ import dev.cool.ssh.task.exec.wrapper.ExecuteInfoWrapper;
 import dev.cool.ssh.task.exec.wrapper.HostInfoWrapper;
 import dev.cool.ssh.task.model.*;
 import dev.cool.ssh.task.storage.TaskStorage;
+import dev.cool.ssh.task.utils.ExecUtils;
 import dev.cool.ssh.task.view.dialog.*;
 import dev.cool.ssh.task.view.node.*;
 import org.jetbrains.annotations.NotNull;
@@ -37,36 +39,100 @@ import org.jetbrains.annotations.NotNull;
 import javax.swing.*;
 import javax.swing.tree.*;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.io.File;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
-public class SSHTaskItem extends JPanel {
+public class SSHTaskItem extends JPanel implements ExecListener {
     private static final String NEW_COLOR_NAME = "NotificationsToolwindow.newNotification.background";
     private static final Color NEW_DEFAULT_COLOR = new JBColor(0xE6EEF7, 0x45494A);
     private static final JBColor NEW_COLOR = JBColor.namedColor(NEW_COLOR_NAME, NEW_DEFAULT_COLOR);
     private static final Color COOKIE_ITEM_BACKGROUND = NEW_COLOR;
-    private Task task;
+    private final Task task;
     private final Tree tree;
-    private Project project;
+    private final Project project;
     private final RootNode rootNode = new RootNode();
-
+    private final ActionButton runButton;
+    private final ActionButton deleteButton;
+    private AnAction runAction;
+    private List<ExecutionNode> runningExecutionNodes = new ArrayList<>();
+    private AtomicInteger taskCounter = new AtomicInteger(0);
 
     public SSHTaskItem(Task task, Project project) {
         this.task = task;
         this.project = project;
         this.setLayout(new VerticalFlowLayout());
         JLabel titleLabel = new JLabel(task.getTaskName(), SwingConstants.LEFT);
-        AnAction runAction = new AnAction("运行", "运行", Icons.Run) {
+        titleLabel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 1) {
+                    JTextField textField = new JTextField(task.getTaskName());
+                    textField.setFont(titleLabel.getFont());
+                    textField.setPreferredSize(new Dimension(200, titleLabel.getPreferredSize().height));
+                    textField.setLocation(titleLabel.getLocation());
+
+                    textField.addKeyListener(new KeyAdapter() {
+                        @Override
+                        public void keyPressed(KeyEvent e) {
+                            if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                                String newName = textField.getText().trim();
+                                if (!newName.isEmpty() && !newName.equals(task.getTaskName())) {
+                                    task.setTaskName(newName);
+                                    titleLabel.setText(newName);
+                                }
+                                Container parent = textField.getParent();
+                                if (parent != null) {
+                                    parent.remove(textField);
+                                    parent.add(titleLabel, BorderLayout.WEST);
+                                    parent.revalidate();
+                                    parent.repaint();
+                                }
+                            }
+                        }
+                    });
+
+                    textField.addFocusListener(new FocusAdapter() {
+                        @Override
+                        public void focusLost(FocusEvent e) {
+                            String newName = textField.getText().trim();
+                            if (!newName.isEmpty() && !newName.equals(task.getTaskName())) {
+                                task.setTaskName(newName);
+                                titleLabel.setText(newName);
+                            }
+                            Container parent = textField.getParent();
+                            if (parent != null) {
+                                parent.remove(textField);
+                                parent.add(titleLabel, BorderLayout.WEST);
+                                parent.revalidate();
+                                parent.repaint();
+                            }
+                        }
+                    });
+
+                    Container parent = titleLabel.getParent();
+                    if (parent != null) {
+                        parent.remove(titleLabel);
+                        parent.add(textField, BorderLayout.WEST);
+                        textField.requestFocus();
+                        parent.revalidate();
+                        parent.repaint();
+                    }
+                }
+            }
+        });
+        runAction = new AnAction("Run", "Run", Icons.Run) {
             @Override
             public void actionPerformed(AnActionEvent e) {
-                ApplicationManager.getApplication().executeOnPooledThread(new TaskExec(buildProgressTask(executionNode -> true)));
+                TaskExec taskExec = createTaskExec(buildProgressTask(executionNode -> true));
+                submitTask(taskExec);
             }
+
         };
-        AnAction deleteAction = new AnAction("删除", "删除", Icons.Delete) {
+        AnAction deleteAction = new AnAction("Delete", "Delete", Icons.Delete) {
             @Override
             public void actionPerformed(AnActionEvent e) {
                 TaskStorage.getInstance().getTasks().remove(task);
@@ -81,9 +147,11 @@ public class SSHTaskItem extends JPanel {
 
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         panel.setOpaque(false);
-        panel.add(createNewActionButton(runAction));
-        panel.add(createNewActionButton(deleteAction));
+        runButton = createNewActionButton(runAction);
+        panel.add(runButton);
 
+        deleteButton = createNewActionButton(deleteAction);
+        panel.add(deleteButton);
         JPanel titlePanel = new JPanel(new BorderLayout());
         titlePanel.setOpaque(false);
         titlePanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
@@ -95,6 +163,31 @@ public class SSHTaskItem extends JPanel {
         tree = initTree();
         this.add(tree);
         loadTaskTree();
+    }
+
+    @Override
+    public void execBegin() {
+        deleteButton.getPresentation().setEnabled(false);
+        runButton.getPresentation().setIcon(State.RUNNING.getIcon());
+        taskCounter.incrementAndGet();
+    }
+
+    @Override
+    public void execEnd() {
+        if (taskCounter.decrementAndGet() == 0) {
+            runButton.getPresentation().setIcon(Icons.Run);
+            deleteButton.getPresentation().setEnabled(true);
+        }
+    }
+
+    @Override
+    public void execOutput(ExecuteInfoWrapper wrapper, String output) {
+        System.out.println(output);
+    }
+
+    @Override
+    public void execTask(ExecuteInfoWrapper wrapper) {
+
     }
 
     private HostNode createHostNode(HostInfo hostInfo) {
@@ -355,6 +448,7 @@ public class SSHTaskItem extends JPanel {
 
                 if (!executeInfos.isEmpty()) {
                     group.add(new ExecNodeAnAction());
+                    group.add(new TerminalAnAction());
                     group.addSeparator();
                     group.add(new DeleteTaskAction());
                 }
@@ -365,6 +459,24 @@ public class SSHTaskItem extends JPanel {
             }
         });
         return tree;
+    }
+
+    public class TerminalAnAction extends AnAction {
+        public TerminalAnAction() {
+            super("Stop", "", AllIcons.Run.Stop);
+        }
+
+        @Override
+        public void actionPerformed(@NotNull AnActionEvent anActionEvent) {
+            for (TreePath collectSelectedPath : TreeUtil.collectSelectedPaths(tree)) {
+                if (collectSelectedPath.getLastPathComponent() instanceof ExecutionNode executionNode) {
+                    executionNode.setCancelled(true);
+                    if (executionNode.getChannel() != null) {
+                        ExecUtils.closeChannel(executionNode.getChannel());
+                    }
+                }
+            }
+        }
     }
 
     private class ExecNodeAnAction extends AnAction {
@@ -386,9 +498,24 @@ public class SSHTaskItem extends JPanel {
                     }
                 }
             }
-            List<HostInfoWrapper> hostInfoWrappers = buildProgressTask(executionNodes::contains);
-            ApplicationManager.getApplication().executeOnPooledThread(new TaskExec(hostInfoWrappers));
+            TaskExec taskExec = createTaskExec(buildProgressTask(executionNodes::contains));
+            submitTask(taskExec);
         }
+    }
+
+    private void submitTask(TaskExec taskExec) {
+        for (HostInfoWrapper hostInfoWrapper : taskExec.getTask()) {
+            for (ExecuteInfoWrapper executeInfo : hostInfoWrapper.getExecuteInfos()) {
+                executeInfo.getNode().setCancelled(false);
+                runningExecutionNodes.add(executeInfo.getNode());
+            }
+        }
+        ApplicationManager.getApplication().executeOnPooledThread(taskExec);
+
+    }
+
+    private TaskExec createTaskExec(List<HostInfoWrapper> hostInfoWrappers) {
+        return new TaskExec(hostInfoWrappers, this);
     }
 
     private class DeleteTaskAction extends AnAction {
@@ -407,6 +534,7 @@ public class SSHTaskItem extends JPanel {
                         hostNode.remove(executionNode);
                         ((HostInfo) hostNode.getUserObject()).getExecuteInfos().remove(executionNode.getExecuteInfo());
                         model.nodeStructureChanged(hostNode);
+                        TreeUtil.expandAll(tree);
                     }
                 }
             }
@@ -430,18 +558,17 @@ public class SSHTaskItem extends JPanel {
             });
             for (HostNode hostNode : hostNodes) {
                 rootNode.remove(hostNode);
-                task.getHosts().remove(hostNode.getUserObject());
                 model.nodeStructureChanged(rootNode);
             }
+            TreeUtil.expandAll(tree);
         }
     }
 
-    private DialogWrapper createEditorDialog(DefaultMutableTreeNode node) {
+    private DialogWrapper doCreateEditorDialog(DefaultMutableTreeNode node) {
         Object object = node.getUserObject();
         if (object instanceof ExecuteInfo executeInfo) {
             if (Objects.equals(executeInfo.getExecuteType(), ExecType.UPLOAD.getExecType())) {
                 FileMapChooseDialog fileMapChooseDialog = new FileMapChooseDialog(project, executeInfo);
-                fileMapChooseDialog.setHostInfo(((HostNode) node.getParent()).getHostInfo());
                 return fileMapChooseDialog;
             }
             if (Objects.equals(executeInfo.getExecuteType(), ExecType.KILL_JAR.getExecType())) {
@@ -461,6 +588,17 @@ public class SSHTaskItem extends JPanel {
             return new SimpleHostInfoConfigDialog(project, hostInfo);
         }
         return null;
+    }
+
+    private DialogWrapper createEditorDialog(DefaultMutableTreeNode node) {
+        DialogWrapper dialogWrapper = doCreateEditorDialog(node);
+        if (dialogWrapper
+                instanceof ExecParameterDialogWrapper execParameterDialogWrapper) {
+            if (node instanceof ExecutionNode executionNode) {
+                execParameterDialogWrapper.setHostInfo(((HostNode) executionNode.getParent()).getHostInfo());
+            }
+        }
+        return dialogWrapper;
     }
 
     private void addExecuteInfoToHosts(ExecuteInfo executeInfo) {
@@ -483,7 +621,7 @@ public class SSHTaskItem extends JPanel {
         public AddTaskAction(HostInfo hostInfo) {
             super("Add Task", "", AllIcons.General.Add);
             setPopup(true);
-            addAll(new AnAction("文件上传", "", AllIcons.Actions.Upload) {
+            addAll(new AnAction("File Upload", "", AllIcons.Actions.Upload) {
                        @Override
                        public void actionPerformed(@NotNull AnActionEvent e) {
                            FileMapChooseDialog fileMapChooseDialog = new FileMapChooseDialog(e.getProject());
@@ -504,12 +642,12 @@ public class SSHTaskItem extends JPanel {
                            }
                        }
                    },
-                    new AnAction("终止jar进程", "", AllIcons.Debugger.KillProcess) {
+                    new AnAction("Stop Java Process", "", AllIcons.Debugger.KillProcess) {
                         @Override
                         public void actionPerformed(AnActionEvent e) {
                             KillJarParameterDialog killJarParameterDialog = new KillJarParameterDialog(e.getProject());
                             killJarParameterDialog.show();
-                            if (killJarParameterDialog.isOK()) {
+                            if (killJarParameterDialog.isOK() && !killJarParameterDialog.getJarName().isEmpty()) {
                                 SimpleParameter simpleParameter = new SimpleParameter();
                                 simpleParameter.setValue(killJarParameterDialog.getJarName());
 
@@ -522,12 +660,12 @@ public class SSHTaskItem extends JPanel {
                             }
                         }
                     },
-                    new AnAction("执行命令", "", Icons.Code) {
+                    new AnAction("Exec Command", "", Icons.Code) {
                         @Override
                         public void actionPerformed(AnActionEvent e) {
                             CommandParameterDialog commandParameterDialog = new CommandParameterDialog(e.getProject());
                             commandParameterDialog.show();
-                            if (commandParameterDialog.isOK()) {
+                            if (commandParameterDialog.isOK() && !commandParameterDialog.getCommand().isEmpty()) {
                                 SimpleParameter simpleParameter = new SimpleParameter();
                                 simpleParameter.setValue(commandParameterDialog.getCommand());
 
@@ -540,12 +678,13 @@ public class SSHTaskItem extends JPanel {
                             }
                         }
                     },
-                    new AnAction("执行脚本", "", Icons.Shell) {
+                    new AnAction("Exec Script", "", Icons.Shell) {
                         @Override
                         public void actionPerformed(AnActionEvent e) {
                             ScriptPathChooseDialog scriptPathChooseDialog = new ScriptPathChooseDialog(e.getProject());
+                            scriptPathChooseDialog.setHostInfo(hostInfo);
                             scriptPathChooseDialog.show();
-                            if (scriptPathChooseDialog.isOK()) {
+                            if (scriptPathChooseDialog.isOK() && !scriptPathChooseDialog.getPath().isEmpty()) {
                                 ScriptParameter simpleParameter = new ScriptParameter();
                                 simpleParameter.setValue(scriptPathChooseDialog.getPath());
                                 simpleParameter.setExecuteInScriptDir(scriptPathChooseDialog.isExecuteInScriptDir());
@@ -573,7 +712,12 @@ public class SSHTaskItem extends JPanel {
                     if (simpleHostInfoConfigDialog.isOK()) {
                         HostInfo hostInfo = simpleHostInfoConfigDialog.buildHost();
                         task.getHosts().add(hostInfo);
-                        loadTaskTree();
+                        // Add new host node directly
+                        DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
+                        HostNode hostNode = (HostNode) createMutableTreeNode(hostInfo);
+                        rootNode.add(hostNode);
+                        model.nodeStructureChanged(rootNode);
+                        TreeUtil.expandAll(tree);
                     }
                 }
             });
@@ -585,7 +729,12 @@ public class SSHTaskItem extends JPanel {
                     if (jumpServerSSHConfigDialog.isOK()) {
                         HostInfo hostInfo = jumpServerSSHConfigDialog.buildHost();
                         task.getHosts().add(hostInfo);
-                        loadTaskTree();
+                        // Add new host node directly
+                        DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
+                        HostNode hostNode = (HostNode) createMutableTreeNode(hostInfo);
+                        rootNode.add(hostNode);
+                        model.nodeStructureChanged(rootNode);
+                        TreeUtil.expandAll(tree);
                     }
                 }
             });
@@ -614,6 +763,27 @@ public class SSHTaskItem extends JPanel {
         return new ActionButton(action, action.getTemplatePresentation(), "hostAdd", new Dimension(24, 24));
     }
 
+    private void updateSortValues(DefaultMutableTreeNode parent) {
+        if (parent == rootNode) {
+            // 更新HostInfo的sort
+            for (int i = 0; i < parent.getChildCount(); i++) {
+                HostNode hostNode = (HostNode) parent.getChildAt(i);
+                ((HostInfo) hostNode.getUserObject()).setSort(i);
+            }
+        } else if (parent instanceof HostNode) {
+            // 更新ExecuteInfo的sort
+            for (int i = 0; i < parent.getChildCount(); i++) {
+                ExecutionNode execNode = (ExecutionNode) parent.getChildAt(i);
+                execNode.getExecuteInfo().setSort(i);
+            }
+        }
+    }
+
+    @Override
+    public void taskExecEnd(ExecuteInfoWrapper info) {
+        this.runningExecutionNodes.remove(info.getNode());
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -636,9 +806,12 @@ public class SSHTaskItem extends JPanel {
                     TreeNode executeNode = hostNode.getChildAt(j);
                     if (executeNode instanceof ExecutionNode executionNode
                             && filter.apply(executionNode)) {
-                        executionNode.setState(State.WAITING);
-                        ExecuteInfoWrapper executeInfoWrapper = new ExecuteInfoWrapper(executionNode, executionNode.getExecuteInfo());
-                        executeInfoWrappers.add(executeInfoWrapper);
+                        if (!runningExecutionNodes.contains(executionNode)) {
+                            executionNode.setState(State.WAITING);
+                            ExecuteInfoWrapper executeInfoWrapper = new ExecuteInfoWrapper(executionNode, executionNode.getExecuteInfo());
+                            executeInfoWrappers.add(executeInfoWrapper);
+                        }
+
                     }
                 }
             }
@@ -710,7 +883,6 @@ public class SSHTaskItem extends JPanel {
         }
     }
 
-
     private static class RootNodeObject {
 
     }
@@ -731,21 +903,6 @@ public class SSHTaskItem extends JPanel {
         }
     }
 
-    private void updateSortValues(DefaultMutableTreeNode parent) {
-        if (parent == rootNode) {
-            // 更新HostInfo的sort
-            for (int i = 0; i < parent.getChildCount(); i++) {
-                HostNode hostNode = (HostNode) parent.getChildAt(i);
-                ((HostInfo) hostNode.getUserObject()).setSort(i);
-            }
-        } else if (parent instanceof HostNode) {
-            // 更新ExecuteInfo的sort
-            for (int i = 0; i < parent.getChildCount(); i++) {
-                ExecutionNode execNode = (ExecutionNode) parent.getChildAt(i);
-                execNode.getExecuteInfo().setSort(i);
-            }
-        }
-    }
 
     private class EditHostAnAction extends AnAction {
         public EditHostAnAction() {
@@ -754,10 +911,10 @@ public class SSHTaskItem extends JPanel {
 
         @Override
         public void actionPerformed(AnActionEvent e) {
-            List<Object> objects = TreeUtil.collectSelectedUserObjects(tree);
-            if (!objects.isEmpty()) {
-//                DialogWrapper editorDialog = createEditorDialog(objects.get(0));
-//                if (editorDialog != null) editorDialog.show();
+            List<TreePath> treePaths = TreeUtil.collectSelectedPaths(tree);
+            if (!treePaths.isEmpty()) {
+                DialogWrapper editorDialog = createEditorDialog(((DefaultMutableTreeNode) treePaths.get(0).getLastPathComponent()));
+                if (editorDialog != null) editorDialog.show();
             }
         }
     }

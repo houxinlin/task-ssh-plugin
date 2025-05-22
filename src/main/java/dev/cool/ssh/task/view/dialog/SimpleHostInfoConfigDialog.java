@@ -27,12 +27,10 @@ public class SimpleHostInfoConfigDialog extends BaseSSHConfigDialog {
 
     @Override
     protected void fillExtendFields(HostInfo hostInfo) {
-        // 普通SSH连接没有额外字段
     }
 
     @Override
     protected void updateExtendFields(HostInfo hostInfo) {
-        // 普通SSH连接没有额外字段
     }
 
     @Override
@@ -41,7 +39,6 @@ public class SimpleHostInfoConfigDialog extends BaseSSHConfigDialog {
         GridBagConstraints gbc = ((GridBagLayout) panel.getLayout()).getConstraints(panel.getComponent(0));
         gbc.gridy = panel.getComponentCount();
         
-        // 添加测试连接标签
         addTestConnectionLabel(panel, gbc);
         
         return panel;

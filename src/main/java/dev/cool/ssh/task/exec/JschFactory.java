@@ -12,6 +12,7 @@ public class JschFactory {
         session.connect();
         ChannelShell channel = (ChannelShell) session.openChannel("shell");
         channel.setPty(true);
+        channel.connect(3000);
         return channel;
     }
 
@@ -22,6 +23,7 @@ public class JschFactory {
         session.setConfig("StrictHostKeyChecking", "no");
         session.connect();
         ChannelExec channel = (ChannelExec) session.openChannel("exec");
+        channel.connect(3000);
         return channel;
     }
 

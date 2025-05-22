@@ -12,11 +12,12 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 public class JumpServerHostInfoChooseDialog extends DialogWrapper implements JumpServerHostFinder {
     private final JTable table;
     private String selectedHostName;
-    private JumpServer jumpServer;
 
     public JumpServerHostInfoChooseDialog(@Nullable Project project,
                                           HostInfo hostInfo) {
@@ -34,9 +35,19 @@ public class JumpServerHostInfoChooseDialog extends DialogWrapper implements Jum
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setRowSelectionAllowed(true);
         table.setFillsViewportHeight(true);
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int selectedRow = table.getSelectedRow();
+                if (selectedRow != -1) {
+                    selectedHostName = table.getValueAt(selectedRow, 0).toString();
+                }
+                close(OK_EXIT_CODE);
+            }
+        });
         table.setRowHeight(32);
         init();
-        jumpServer = new JumpServer(hostInfo);
+        JumpServer jumpServer = new JumpServer(hostInfo);
         jumpServer.beginListHost(this);
         Disposer.register(getDisposable(), jumpServer);
     }

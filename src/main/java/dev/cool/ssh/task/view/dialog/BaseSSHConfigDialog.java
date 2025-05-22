@@ -52,9 +52,7 @@ public abstract class BaseSSHConfigDialog extends DialogWrapper {
         if (testLabel.getIcon() == AnimatedIcon.Default.INSTANCE) {
             return;
         }
-
         testLabel.setIcon(AnimatedIcon.Default.INSTANCE);
-
         HostInfo hostInfo = buildHost();
         hostInfo.testConnection(project, new ConnectionTestCallback() {
             @Override
@@ -91,14 +89,29 @@ public abstract class BaseSSHConfigDialog extends DialogWrapper {
         gbc.weightx = 1.0;
 
         // 主机和端口
-        JPanel hostPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        JPanel hostPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbcHost = new GridBagConstraints();
+        gbcHost.insets = JBUI.insets(2);
+        gbcHost.fill = GridBagConstraints.HORIZONTAL;
+
+// hostField，占主要宽度
+        gbcHost.gridx = 0;
+        gbcHost.weightx = 1.0;
         hostField = new JTextField();
-        hostField.setPreferredSize(new Dimension(280, hostField.getPreferredSize().height));
+        hostPanel.add(hostField, gbcHost);
+
+// JLabel，占较小宽度，不变宽
+        gbcHost.gridx = 1;
+        gbcHost.weightx = 0;
+        hostPanel.add(new JLabel("Port:"), gbcHost);
+
+// portField，可随父布局缩放
+        gbcHost.gridx = 2;
+        gbcHost.weightx = 0.3;
         portField = new JTextField("22");
-        portField.setPreferredSize(new Dimension(60, hostField.getPreferredSize().height));
-        hostPanel.add(hostField);
-        hostPanel.add(new JLabel(":"));
-        hostPanel.add(portField);
+        hostPanel.add(portField, gbcHost);
+
+// 将hostPanel添加到主panel中
         panel.add(hostPanel, gbc);
 
         gbc.gridy++;

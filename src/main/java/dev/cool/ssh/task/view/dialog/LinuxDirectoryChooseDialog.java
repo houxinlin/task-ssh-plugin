@@ -3,6 +3,7 @@ package dev.cool.ssh.task.view.dialog;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.util.Disposer;
+import com.intellij.ui.LoadingNode;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.treeStructure.SimpleTree;
 import dev.cool.ssh.task.model.FileEntry;
@@ -11,11 +12,15 @@ import dev.cool.ssh.task.ssh.ConnectionListener;
 import dev.cool.ssh.task.ssh.FileSystemManager;
 import dev.cool.ssh.task.ssh.JumpServerFileManager;
 import dev.cool.ssh.task.ssh.SimpleFileSystemManager;
+import dev.cool.ssh.task.view.node.FileNode;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
+import javax.swing.event.TreeExpansionEvent;
+import javax.swing.event.TreeExpansionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreePath;
 import java.util.List;
 
 public class LinuxDirectoryChooseDialog extends DialogWrapper implements ConnectionListener {
@@ -23,9 +28,12 @@ public class LinuxDirectoryChooseDialog extends DialogWrapper implements Connect
     private SimpleTree directoryTree;
     private DefaultTreeModel treeModel;
     private DefaultMutableTreeNode rootNode;
+    private String selectedDirectory;
+    private final boolean directory;
 
-    public LinuxDirectoryChooseDialog(@Nullable Project project, HostInfo hostInfo) {
+    public LinuxDirectoryChooseDialog(boolean directory, @Nullable Project project, HostInfo hostInfo) {
         super(project);
+        this.directory = directory;
         fileSystemManager = hostInfo.getHostType() == 2 ?
                 new JumpServerFileManager(hostInfo) : new SimpleFileSystemManager(hostInfo);
         setSize(400, 600);
@@ -34,28 +42,40 @@ public class LinuxDirectoryChooseDialog extends DialogWrapper implements Connect
         init();
         Disposer.register(getDisposable(), fileSystemManager);
         fileSystemManager.connectFileSystem(this);
+        setOKActionEnabled(false);
+    }
+
+    public String getSelectedDirectory() {
+        return selectedDirectory;
     }
 
     private void initTree() {
-        rootNode = new DefaultMutableTreeNode(new FileEntry("Loading...", true, "", ""));
+        rootNode = new LoadingNode();
         treeModel = new DefaultTreeModel(rootNode);
         directoryTree = new SimpleTree(treeModel);
-        directoryTree.setCellRenderer(new FileEntryTreeCellRenderer());
-
-        directoryTree.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
-                if (evt.getClickCount() == 2) {
-                    DefaultMutableTreeNode node = (DefaultMutableTreeNode)
-                            directoryTree.getLastSelectedPathComponent();
-                    if (node == null) return;
-
-                    FileEntry fileEntry = (FileEntry) node.getUserObject();
-                    if (fileEntry.isDirectory()) {
-                        loadDirectory(node, getFullPath(node));
-                    }
+        directoryTree.addTreeExpansionListener(new TreeExpansionListener() {
+            @Override
+            public void treeExpanded(TreeExpansionEvent event) {
+                TreePath path = event.getPath();
+                if (path != null && path.getLastPathComponent() instanceof FileNode fileNode) {
+                    loadDirectory(fileNode, getFullPath(fileNode));
                 }
             }
+
+            @Override
+            public void treeCollapsed(TreeExpansionEvent event) {
+
+            }
         });
+        directoryTree.addTreeSelectionListener(event -> {
+            TreePath path = event.getPath();
+            if (path != null && path.getLastPathComponent() instanceof FileNode fileNode) {
+                selectedDirectory = getFullPath(fileNode);
+                setOKActionEnabled(fileNode.getFileEntry().isDirectory() == directory);
+            }
+        });
+        directoryTree.setCellRenderer(new FileEntryTreeCellRenderer());
+
     }
 
     private String getFullPath(DefaultMutableTreeNode node) {
@@ -77,9 +97,11 @@ public class LinuxDirectoryChooseDialog extends DialogWrapper implements Connect
     }
 
     private void loadDirectory(DefaultMutableTreeNode parentNode, String path) {
+        if (parentNode instanceof FileNode fileNode) {
+            if (fileNode.isFinish()) return;
+        }
         parentNode.removeAllChildren();
-        DefaultMutableTreeNode loadingNode = new DefaultMutableTreeNode(
-                new FileEntry("Loading...", true, "", ""));
+        DefaultMutableTreeNode loadingNode = new LoadingNode();
         treeModel.insertNodeInto(loadingNode, parentNode, 0);
         treeModel.reload(parentNode);
 
@@ -90,9 +112,12 @@ public class LinuxDirectoryChooseDialog extends DialogWrapper implements Connect
                     parentNode.removeAllChildren();
                     for (FileEntry file : files) {
                         if (!file.getFileName().equals(".") && !file.getFileName().equals("..")) {
-                            DefaultMutableTreeNode childNode = new DefaultMutableTreeNode(file);
+                            FileNode childNode = new FileNode(file);
                             treeModel.insertNodeInto(childNode, parentNode, parentNode.getChildCount());
                         }
+                    }
+                    if (parentNode instanceof FileNode fileNode) {
+                        fileNode.setFinish(true);
                     }
                     treeModel.nodeStructureChanged(parentNode);
                 });

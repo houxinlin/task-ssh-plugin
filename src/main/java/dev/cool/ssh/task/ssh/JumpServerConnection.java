@@ -52,6 +52,9 @@ public class JumpServerConnection {
                 break;
             }
         }
+        if (prompt.length() >= 3) {
+            prompt.delete(0, 3);
+        }
         return prompt.reverse().toString();
     }
 
@@ -61,13 +64,11 @@ public class JumpServerConnection {
                 try {
                     return executeJumpServerLogin(input, output, info);
                 } catch (Throwable e) {
-                    e.printStackTrace();
                     return null;
                 }
             });
-            return future.get(2500, TimeUnit.SECONDS);
+            return future.get(2, TimeUnit.SECONDS);
         } catch (Exception e) {
-            e.printStackTrace();
             return null;
         }
     }

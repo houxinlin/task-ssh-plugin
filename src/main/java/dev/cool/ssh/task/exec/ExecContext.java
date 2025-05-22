@@ -12,6 +12,8 @@ public class ExecContext {
     private OutputStream outputStream;
     private HostInfo hostInfo;
     private ExecuteInfoWrapper executeInfoWrapper;
+    private ExecListener execListener;
+
     public ExecContext(String sshPrompt, InputStream inputStream, OutputStream outputStream) {
         this.sshPrompt = sshPrompt;
         this.inputStream = inputStream;
@@ -56,5 +58,13 @@ public class ExecContext {
 
     public void setOutputStream(OutputStream outputStream) {
         this.outputStream = outputStream;
+    }
+
+    public ExecListener getExecListener() {
+        return execListener;
+    }
+
+    public void setExecListener(ExecListener execListener) {
+        this.execListener = execListener;
     }
 }

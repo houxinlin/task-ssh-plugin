@@ -6,6 +6,7 @@ import com.jcraft.jsch.ChannelShell;
 import com.jcraft.jsch.JSchException;
 import dev.cool.ssh.task.exec.JschFactory;
 import dev.cool.ssh.task.model.HostInfo;
+import dev.cool.ssh.task.utils.ExecUtils;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -37,7 +38,6 @@ public class JumpServer implements Disposable {
             channelShell = JschFactory.openChannel(hostInfo);
             OutputStream outputStream = channelShell.getOutputStream();
             InputStream inputStream = channelShell.getInputStream();
-            channelShell.connect();
             outputStream.write("p\r".getBytes());
             outputStream.flush();
             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
@@ -60,12 +60,7 @@ public class JumpServer implements Disposable {
 
     public void closeChannel() {
         if (channelShell != null) {
-            channelShell.disconnect();
-            try {
-                channelShell.getSession().disconnect();
-            } catch (JSchException ignored) {
-
-            }
+            ExecUtils.closeChannel(channelShell);
         }
     }
 }

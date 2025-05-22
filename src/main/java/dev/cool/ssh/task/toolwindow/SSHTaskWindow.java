@@ -11,6 +11,7 @@ import org.jetbrains.annotations.NotNull;
 public class SSHTaskWindow implements ToolWindowFactory, DumbAware {
     @Override
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
+        toolWindow.setSplitMode(false,()->{});
         toolWindow.getContentManager()
                 .addContent(toolWindow.getContentManager()
                         .getFactory()
