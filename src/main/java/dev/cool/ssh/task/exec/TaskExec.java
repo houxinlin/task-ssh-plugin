@@ -37,6 +37,7 @@ public class TaskExec implements Runnable {
                 } catch (Exception e) {
                     execListener.execOutput(executeInfo, e.getMessage());
                     executeInfoNode.setState(State.FAILED);
+                    executeInfoNode.setErrorMessage(e.getMessage());
                 }
             }
             execListener.taskExecEnd(executeInfo);

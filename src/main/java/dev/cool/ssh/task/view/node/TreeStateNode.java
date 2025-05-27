@@ -10,6 +10,8 @@ import javax.swing.tree.DefaultTreeModel;
 public class TreeStateNode extends DefaultMutableTreeNode {
     private State state = State.WAITING;
     private final Tree tree;
+    private String errorMessage;
+
 
     public TreeStateNode(Object userObject, Tree tree) {
         super(userObject);
@@ -23,6 +25,15 @@ public class TreeStateNode extends DefaultMutableTreeNode {
     protected void nodeChanged(){
         ApplicationManager.getApplication().invokeLater(() -> ((DefaultTreeModel) tree.getModel()).nodeChanged(TreeStateNode.this));
     }
+
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
+    }
+
     public void setState(State state) {
         this.state = state;
         nodeChanged();

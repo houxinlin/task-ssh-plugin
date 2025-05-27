@@ -7,6 +7,7 @@ import dev.cool.ssh.task.exec.ExecContext;
 import dev.cool.ssh.task.exec.jump.Transfer;
 import dev.cool.ssh.task.exec.wrapper.ExecuteInfoWrapper;
 import dev.cool.ssh.task.model.FileExecuteInfo;
+import dev.cool.ssh.task.utils.LrzszUtils;
 import dev.cool.ssh.task.utils.MD5Util;
 import dev.cool.ssh.task.view.node.ExecutionNode;
 import dev.cool.ssh.task.view.node.ProgressExecuteNode;
@@ -138,21 +139,21 @@ public class RzFileTransmissionTask extends BasicTask implements Transfer.Progre
     }
 
     private String[] buildSzCommand(String name) {
-        String osName = System.getProperty("os.name").toLowerCase();
-        if (osName.contains("windows")) {
-            return new String[]{"D:\\app\\lrzsz_0.12.21rc_windows_x86_64\\lrzsz_0.12.21rc_windows_x86_64\\sz.exe", "-b", name};
-        }
-        if (osName.contains("linux")) {
-            return new String[]{"lrzsz-sz", "-b", name};
-        }
-        return new String[]{"sz", "-b", name};
+        String executePath = LrzszUtils.getExecutePath();
+        if (executePath == null) throw new IllegalArgumentException("找不到sz程序，请先安装");
+        return new String[]{executePath, "-b", name};
     }
 
-    private void startSzTransfer(OutputStream sshOut, InputStream sshIn, String file) throws IOException {
+    private void startSzTransfer(OutputStream sshOut, InputStream sshIn, String file) throws Exception {
         File file1 = new File(file);
         String name = file1.getName();
-
-        Process szProcess = new ProcessBuilder().command(buildSzCommand(name)).directory(file1.getParentFile()).start();
+        String[] command = null;
+        try {
+            command = buildSzCommand(name);
+        } catch (Exception e) {
+            throw e;
+        }
+        Process szProcess = new ProcessBuilder().command(command).directory(file1.getParentFile()).start();
         InputStream szIn = szProcess.getInputStream();
         OutputStream szOut = szProcess.getOutputStream();
         Transfer transfer = Transfer.create(szIn, sshOut, file, this);

@@ -32,6 +32,7 @@ import dev.cool.ssh.task.exec.wrapper.HostInfoWrapper;
 import dev.cool.ssh.task.model.*;
 import dev.cool.ssh.task.storage.TaskStorage;
 import dev.cool.ssh.task.utils.ExecUtils;
+import dev.cool.ssh.task.utils.LrzszUtils;
 import dev.cool.ssh.task.view.dialog.*;
 import dev.cool.ssh.task.view.node.*;
 import org.jetbrains.annotations.NotNull;
@@ -638,7 +639,12 @@ public class SSHTaskItem extends JPanel implements ExecListener {
                                        .executeName("Upload " + file.getName())
                                        .executeExtJSON(fileExecuteInfo)
                                        .build();
-                               addExecuteInfoToHosts(executeInfo);
+
+                               ApplicationManager.getApplication().executeOnPooledThread(() -> {
+                                   if (LrzszUtils.canExecute()) {
+                                       SwingUtilities.invokeLater(() -> addExecuteInfoToHosts(executeInfo));
+                                   }
+                               });
                            }
                        }
                    },
@@ -840,6 +846,7 @@ public class SSHTaskItem extends JPanel implements ExecListener {
             this.myDurationWidth = 0;
             this.myDurationLeftInset = 0;
             this.myDurationRightInset = 0;
+            setToolTipText(null);
             DefaultMutableTreeNode node = (DefaultMutableTreeNode) value;
             if (node instanceof ExecutionNode executionNode) {
                 setIcon(executionNode.getState().getIcon());
@@ -851,6 +858,9 @@ public class SSHTaskItem extends JPanel implements ExecListener {
                     this.myDurationRightInset = this.myDurationLeftInset;
                     this.myDurationColor = selected ? UIUtil.getTreeSelectionForeground(hasFocus) : SimpleTextAttributes.GRAYED_ATTRIBUTES.getFgColor();
                 }
+            }
+            if (node instanceof TreeStateNode treeStateNode) {
+                setToolTipText(treeStateNode.getErrorMessage());
             }
         }
 
