@@ -53,7 +53,9 @@ public class JumpServerConnection {
             }
         }
         if (prompt.length() >= 3) {
-            prompt.delete(0, 3);
+            String trim = prompt.toString().trim();
+            String newString = trim.substring(trim.indexOf(" "));
+            return new StringBuilder().append(newString).reverse().toString();
         }
         return prompt.reverse().toString();
     }

@@ -1,6 +1,5 @@
 package dev.cool.ssh.task.view.dialog;
 
-import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
 import dev.cool.ssh.task.model.ExecuteInfo;
@@ -26,7 +25,7 @@ public abstract class ExecParameterDialogWrapper extends DialogWrapper {
     protected void doOKAction() {
         super.doOKAction();
         if (executeInfo != null) {
-            ApplicationManager.getApplication().executeOnPooledThread(() -> executeInfo.setExecuteExtJSON(buildExtJSON()));
+            executeInfo.setExecuteExtJSON(buildExtJSON());
         }
     }
 

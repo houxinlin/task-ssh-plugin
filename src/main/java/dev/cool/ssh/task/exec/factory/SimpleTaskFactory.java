@@ -8,6 +8,7 @@ import dev.cool.ssh.task.exec.ExecContext;
 import dev.cool.ssh.task.exec.ExecType;
 import dev.cool.ssh.task.exec.ITask;
 import dev.cool.ssh.task.exec.JschFactory;
+import dev.cool.ssh.task.exec.task.CommandBuilder;
 import dev.cool.ssh.task.exec.wrapper.ExecuteInfoWrapper;
 import dev.cool.ssh.task.model.FileExecuteInfo;
 import dev.cool.ssh.task.model.HostInfo;
@@ -27,7 +28,8 @@ public class SimpleTaskFactory {
         if (Objects.equals(executeInfo.getExecuteType(), ExecType.KILL_JAR.getExecType())) {
             return new KillJarTask();
         }
-        if (Objects.equals(executeInfo.getExecuteType(), ExecType.COMMAND.getExecType())) {
+        if (Objects.equals(executeInfo.getExecuteType(), ExecType.COMMAND.getExecType()) ||
+                Objects.equals(executeInfo.getExecuteType(), ExecType.KILL_PORT.getExecType())) {
             return new CommandTask();
         }
         if (Objects.equals(executeInfo.getExecuteType(), ExecType.SCRIPT.getExecType())) {
@@ -43,25 +45,18 @@ public class SimpleTaskFactory {
         execContext.getExecuteInfoWrapper().getNode().setChannel(channelExec);
         try {
             channelExec.setCommand(command);
-
-            // 获取标准输出
             java.io.InputStream in = channelExec.getInputStream();
-            // 获取错误输出
             java.io.InputStream err = channelExec.getErrStream();
 
-            // 读取标准输出
             java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(in));
             String line;
             while ((line = reader.readLine()) != null) {
-                System.out.println(line);
+                execContext.getExecListener().execOutput(execContext.getExecuteInfoWrapper(), line);
             }
-            // 读取错误输出
             java.io.BufferedReader errReader = new java.io.BufferedReader(new java.io.InputStreamReader(err));
             while ((line = errReader.readLine()) != null) {
-                System.err.println(line);
+                execContext.getExecListener().execOutput(execContext.getExecuteInfoWrapper(), line);
             }
-
-            // 等待命令执行完成
             while (channelExec.isConnected()) {
                 Thread.sleep(100);
             }
@@ -74,7 +69,7 @@ public class SimpleTaskFactory {
     private static class CommandTask implements ITask {
         @Override
         public void execute(ExecContext execContext) throws Exception {
-            String command = new Gson().fromJson(execContext.getExecuteInfoWrapper().getExecuteExtJSON(), SimpleParameter.class).getValue();
+            String command = CommandBuilder.buildCommand(execContext.getExecuteInfoWrapper());
             execCommand(command, execContext.getHostInfo(), execContext);
         }
     }

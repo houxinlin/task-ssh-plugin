@@ -15,4 +15,5 @@ public interface Icons {
     @Nullable Icon Shell = IconLoader.getIcon("/icons/shell.svg", Icons.class);
     @Nullable Icon Code = IconLoader.getIcon("/icons/codeSpan.svg", Icons.class);
     @Nullable Icon Run = IconLoader.getIcon("/icons/run.svg", Icons.class);
+    @Nullable Icon Help = IconLoader.getIcon("/icons/help.svg", Icons.class);
 }

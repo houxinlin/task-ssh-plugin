@@ -5,6 +5,7 @@ import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import com.intellij.util.ui.JBUI;
+import dev.cool.ssh.task.common.Icons;
 import dev.cool.ssh.task.model.ExecuteInfo;
 import dev.cool.ssh.task.model.FileExecuteInfo;
 import dev.cool.ssh.task.utils.JSONUtils;
@@ -18,13 +19,11 @@ import java.io.File;
 public class FileMapChooseDialog extends ExecParameterDialogWrapper {
     private TextFieldWithBrowseButton localPathField;
     private TextFieldWithBrowseButton remotePathField;
-
+    private JCheckBox sudoCheckBox;
     private final Project project;
-
 
     public FileMapChooseDialog(@Nullable Project project) {
         this(project, null);
-
     }
 
     public FileMapChooseDialog(@Nullable Project project, ExecuteInfo executeInfo) {
@@ -40,9 +39,13 @@ public class FileMapChooseDialog extends ExecParameterDialogWrapper {
         FileExecuteInfo fileExecuteInfo = new FileExecuteInfo();
         fileExecuteInfo.setLocalPath(getLocalPath());
         fileExecuteInfo.setRemotePath(getRemotePath());
+        fileExecuteInfo.setSudo(sudoCheckBox.isSelected());
         return JSONUtils.toJSON(fileExecuteInfo);
     }
 
+    public boolean isSudo(){
+        return sudoCheckBox.isSelected();
+    }
     @Override
     protected @Nullable JComponent createCenterPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
@@ -91,12 +94,28 @@ public class FileMapChooseDialog extends ExecParameterDialogWrapper {
         localPathField.setPreferredSize(new Dimension(300, localPathField.getPreferredSize().height));
         remotePathField.setPreferredSize(new Dimension(300, remotePathField.getPreferredSize().height));
 
-        panel.setPreferredSize(new Dimension(700, 120));
+        // 添加sudo复选框
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.gridwidth = 3;
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.insets = JBUI.insets(8, 8, 4, 8);
+        
+        JPanel sudoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        sudoCheckBox = new JCheckBox("sudo");
+        JLabel helpLabel = new JLabel(Icons.Help);
+        helpLabel.setToolTipText("如果是jumpserver则使用sudo rz执行");
+        sudoPanel.add(sudoCheckBox);
+        sudoPanel.add(helpLabel);
+        panel.add(sudoPanel, gbc);
+
+        panel.setPreferredSize(new Dimension(700, 150));
 
         if (getExecuteInfo() != null) {
             FileExecuteInfo fileExecuteInfo = JSONUtils.fromJSON(getExecuteInfo().getExecuteExtJSON(), FileExecuteInfo.class);
             localPathField.setText(fileExecuteInfo.getLocalPath());
             remotePathField.setText(fileExecuteInfo.getRemotePath());
+            sudoCheckBox.setSelected(fileExecuteInfo.isSudo());
         }
         return panel;
     }

@@ -565,22 +565,29 @@ public class SSHTaskItem extends JPanel implements ExecListener {
         }
     }
 
+    private DialogWrapper doCreateEditorDialogByType(ExecuteInfo executeInfo) {
+        if (Objects.equals(executeInfo.getExecuteType(), ExecType.UPLOAD.getExecType())) {
+            return new FileMapChooseDialog(project, executeInfo);
+        }
+        if (Objects.equals(executeInfo.getExecuteType(), ExecType.KILL_JAR.getExecType())) {
+            return new KillJarParameterDialog(project, executeInfo);
+        }
+        if (Objects.equals(executeInfo.getExecuteType(), ExecType.COMMAND.getExecType())) {
+            return new CommandParameterDialog(project, executeInfo);
+        }
+        if (Objects.equals(executeInfo.getExecuteType(), ExecType.SCRIPT.getExecType())) {
+            return new ScriptPathChooseDialog(project, executeInfo);
+        }
+        if (Objects.equals(executeInfo.getExecuteType(), ExecType.KILL_PORT.getExecType())) {
+            return new KillPortParameterDialog(project, executeInfo);
+        }
+        return null;
+    }
+
     private DialogWrapper doCreateEditorDialog(DefaultMutableTreeNode node) {
         Object object = node.getUserObject();
         if (object instanceof ExecuteInfo executeInfo) {
-            if (Objects.equals(executeInfo.getExecuteType(), ExecType.UPLOAD.getExecType())) {
-                FileMapChooseDialog fileMapChooseDialog = new FileMapChooseDialog(project, executeInfo);
-                return fileMapChooseDialog;
-            }
-            if (Objects.equals(executeInfo.getExecuteType(), ExecType.KILL_JAR.getExecType())) {
-                return new KillJarParameterDialog(project, executeInfo);
-            }
-            if (Objects.equals(executeInfo.getExecuteType(), ExecType.COMMAND.getExecType())) {
-                return new CommandParameterDialog(project, executeInfo);
-            }
-            if (Objects.equals(executeInfo.getExecuteType(), ExecType.SCRIPT.getExecType())) {
-                return new ScriptPathChooseDialog(project, executeInfo);
-            }
+            return doCreateEditorDialogByType(executeInfo);
         }
         if (object instanceof HostInfo hostInfo) {
             if (hostInfo.getHostType() == 2) {
@@ -633,6 +640,7 @@ public class SSHTaskItem extends JPanel implements ExecListener {
                                FileExecuteInfo fileExecuteInfo = new FileExecuteInfo();
                                fileExecuteInfo.setLocalPath(fileMapChooseDialog.getLocalPath());
                                fileExecuteInfo.setRemotePath(fileMapChooseDialog.getRemotePath());
+                               fileExecuteInfo.setSudo(fileMapChooseDialog.isSudo());
 
                                ExecuteInfo executeInfo = new ExecuteInfoBuilder()
                                        .executeType(ExecType.UPLOAD.getExecType())
@@ -670,15 +678,17 @@ public class SSHTaskItem extends JPanel implements ExecListener {
                         @Override
                         public void actionPerformed(AnActionEvent e) {
                             CommandParameterDialog commandParameterDialog = new CommandParameterDialog(e.getProject());
+                            commandParameterDialog.setHostInfo(hostInfo);
                             commandParameterDialog.show();
                             if (commandParameterDialog.isOK() && !commandParameterDialog.getCommand().isEmpty()) {
-                                SimpleParameter simpleParameter = new SimpleParameter();
-                                simpleParameter.setValue(commandParameterDialog.getCommand());
+                                CommandParameter parameter = new CommandParameter();
+                                parameter.setValue(commandParameterDialog.getCommand());
+                                parameter.setDirectory(commandParameterDialog.getDirectory());
 
                                 ExecuteInfo executeInfo = new ExecuteInfoBuilder()
                                         .executeType(ExecType.COMMAND.getExecType())
                                         .executeName("执行命令 " + commandParameterDialog.getCommand())
-                                        .executeExtJSON(simpleParameter)
+                                        .executeExtJSON(parameter)
                                         .build();
                                 addExecuteInfoToHosts(executeInfo);
                             }
@@ -699,6 +709,18 @@ public class SSHTaskItem extends JPanel implements ExecListener {
                                         .executeName("执行脚本 " + scriptPathChooseDialog.getPath())
                                         .executeExtJSON(simpleParameter)
                                         .build();
+                                addExecuteInfoToHosts(executeInfo);
+                            }
+                        }
+                    }, new AnAction("Kill Port", "", Icons.Shell) {
+                        @Override
+                        public void actionPerformed(AnActionEvent e) {
+                            ExecuteInfo executeInfo = new ExecuteInfoBuilder()
+                                    .executeType(ExecType.KILL_PORT.getExecType())
+                                    .build();
+                            DialogWrapper dialogWrapper = doCreateEditorDialogByType(executeInfo);
+                            dialogWrapper.show();
+                            if (dialogWrapper.isOK()) {
                                 addExecuteInfoToHosts(executeInfo);
                             }
                         }

@@ -5,10 +5,7 @@ import dev.cool.ssh.task.exec.ISSH;
 import dev.cool.ssh.task.exec.ITask;
 import dev.cool.ssh.task.exec.ssh.JumpServerSSH;
 import dev.cool.ssh.task.exec.ssh.SimpleISSH;
-import dev.cool.ssh.task.exec.task.ExecuteCommandTask;
-import dev.cool.ssh.task.exec.task.KillJarTask;
-import dev.cool.ssh.task.exec.task.RzFileTransmissionTask;
-import dev.cool.ssh.task.exec.task.ScriptExecuteTask;
+import dev.cool.ssh.task.exec.task.*;
 import dev.cool.ssh.task.exec.wrapper.ExecuteInfoWrapper;
 import org.jetbrains.annotations.NotNull;
 
@@ -23,8 +20,9 @@ public class TaskFactory {
             if (Objects.equals(executeInfo.getExecuteType(), ExecType.KILL_JAR.getExecType())) {
                 return new KillJarTask(executeInfo);
             }
-            if (Objects.equals(executeInfo.getExecuteType(), ExecType.COMMAND.getExecType())) {
-                return new ExecuteCommandTask(executeInfo);
+            if (Objects.equals(executeInfo.getExecuteType(), ExecType.COMMAND.getExecType()) ||
+                    Objects.equals(executeInfo.getExecuteType(), ExecType.KILL_PORT.getExecType())) {
+                return new CommandTask(executeInfo);
             }
             if (Objects.equals(executeInfo.getExecuteType(), ExecType.SCRIPT.getExecType())) {
                 return new ScriptExecuteTask(executeInfo);

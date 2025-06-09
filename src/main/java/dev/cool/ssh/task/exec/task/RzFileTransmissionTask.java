@@ -74,7 +74,10 @@ public class RzFileTransmissionTask extends BasicTask implements Transfer.Progre
                                   ExecuteInfoWrapper executeInfo) throws Exception {
         FileExecuteInfo fileExecuteInfo = new Gson().fromJson(executeInfo.getExecuteExtJSON(), FileExecuteInfo.class);
         String remotePath = fileExecuteInfo.getRemotePath();
-        String command = String.format("mkdir -p %s && cd %s && rz -b -y\r", remotePath, remotePath);
+        String command = String.format("mkdir -p %s && cd %s && %srz -b -y\r", 
+            remotePath, 
+            remotePath,
+            fileExecuteInfo.isSudo() ? "sudo " : "");
         stream.getOutputStream().write(command.getBytes(StandardCharsets.UTF_8));
         stream.getOutputStream().flush();
     }
