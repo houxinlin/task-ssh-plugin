@@ -335,20 +335,25 @@ public class SSHTaskItem extends JPanel implements ExecListener {
                 DefaultMutableTreeNode target = (DefaultMutableTreeNode) path.getLastPathComponent();
                 List<File> fileList = FileCopyPasteUtil.getFileListFromAttachedObject(event.getAttachedObject());
                 if (!fileList.isEmpty()) {
+                    HostNode hostNode = null;
+                    if (target instanceof ExecutionNode executionNode) {
+                        hostNode = ((HostNode) executionNode.getParent());
+                    }
+                    if (target instanceof HostNode targetHostNode) {
+                        hostNode = targetHostNode;
+                    }
+
                     for (File file : fileList) {
                         ExecuteInfo executeInfo = new ExecuteInfoBuilder()
                                 .executeType(ExecType.UPLOAD.getExecType())
                                 .build();
                         FileMapChooseDialog fileMapChooseDialog = new FileMapChooseDialog(project, executeInfo);
+                        if (hostNode != null) {
+                            fileMapChooseDialog.setHostInfo(hostNode.getHostInfo());
+                        }
                         fileMapChooseDialog.setLocalPath(file.getAbsolutePath());
                         fileMapChooseDialog.show();
-                        HostNode hostNode = null;
-                        if (target instanceof ExecutionNode executionNode) {
-                            hostNode = ((HostNode) executionNode.getParent());
-                        }
-                        if (target instanceof HostNode targetHostNode) {
-                            hostNode = targetHostNode;
-                        }
+
                         if (fileMapChooseDialog.isOK() && hostNode != null) {
                             doAddExecuteInfoToHosts(executeInfo, hostNode);
                             TreeUtil.expandAll(tree);
