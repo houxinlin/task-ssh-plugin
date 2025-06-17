@@ -29,9 +29,14 @@ public class FileMapChooseDialog extends ExecParameterDialogWrapper {
     public FileMapChooseDialog(@Nullable Project project, ExecuteInfo executeInfo) {
         super(project, executeInfo);
         this.project = project;
+        this.localPathField = new TextFieldWithBrowseButton();
         setSize(750, 200);
         init();
         setTitle("文件映射选择");
+    }
+
+    public void setLocalPath(String localPath) {
+        this.localPathField.setText(localPath);
     }
 
     @Override
@@ -43,9 +48,10 @@ public class FileMapChooseDialog extends ExecParameterDialogWrapper {
         return JSONUtils.toJSON(fileExecuteInfo);
     }
 
-    public boolean isSudo(){
+    public boolean isSudo() {
         return sudoCheckBox.isSelected();
     }
+
     @Override
     protected @Nullable JComponent createCenterPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
@@ -57,10 +63,8 @@ public class FileMapChooseDialog extends ExecParameterDialogWrapper {
         gbc.gridx = 0;
         gbc.gridy = 0;
         panel.add(new JLabel("本地路径:"), gbc);
-
         // 本地路径输入框
         gbc.gridy = 1;
-        localPathField = new TextFieldWithBrowseButton();
         localPathField.getTextField().setColumns(40);
         localPathField.addBrowseFolderListener("选择本地文件或文件夹", "", project,
                 FileChooserDescriptorFactory.createSingleFileOrFolderDescriptor());
@@ -100,7 +104,7 @@ public class FileMapChooseDialog extends ExecParameterDialogWrapper {
         gbc.gridwidth = 3;
         gbc.anchor = GridBagConstraints.WEST;
         gbc.insets = JBUI.insets(8, 8, 4, 8);
-        
+
         JPanel sudoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         sudoCheckBox = new JCheckBox("sudo");
         JLabel helpLabel = new JLabel(Icons.Help);
@@ -113,9 +117,11 @@ public class FileMapChooseDialog extends ExecParameterDialogWrapper {
 
         if (getExecuteInfo() != null) {
             FileExecuteInfo fileExecuteInfo = JSONUtils.fromJSON(getExecuteInfo().getExecuteExtJSON(), FileExecuteInfo.class);
-            localPathField.setText(fileExecuteInfo.getLocalPath());
-            remotePathField.setText(fileExecuteInfo.getRemotePath());
-            sudoCheckBox.setSelected(fileExecuteInfo.isSudo());
+            if (fileExecuteInfo != null) {
+                localPathField.setText(fileExecuteInfo.getLocalPath());
+                remotePathField.setText(fileExecuteInfo.getRemotePath());
+                sudoCheckBox.setSelected(fileExecuteInfo.isSudo());
+            }
         }
         return panel;
     }
@@ -124,7 +130,7 @@ public class FileMapChooseDialog extends ExecParameterDialogWrapper {
     protected void doOKAction() {
         super.doOKAction();
         if (getExecuteInfo() != null) {
-            getExecuteInfo().setExecuteName("Upload " + new File(localPathField.getText()).getName());
+            getExecuteInfo().setExecuteName("Upload " + new File(localPathField.getText()).getName() + "->" + remotePathField.getText());
         }
     }
 

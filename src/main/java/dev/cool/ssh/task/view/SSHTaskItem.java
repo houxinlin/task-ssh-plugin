@@ -58,9 +58,8 @@ public class SSHTaskItem extends JPanel implements ExecListener {
     private final RootNode rootNode = new RootNode();
     private final ActionButton runButton;
     private final ActionButton deleteButton;
-    private AnAction runAction;
-    private List<ExecutionNode> runningExecutionNodes = new ArrayList<>();
-    private AtomicInteger taskCounter = new AtomicInteger(0);
+    private final List<ExecutionNode> runningExecutionNodes = new ArrayList<>();
+    private final AtomicInteger taskCounter = new AtomicInteger(0);
 
     public SSHTaskItem(Task task, Project project) {
         this.task = task;
@@ -125,7 +124,7 @@ public class SSHTaskItem extends JPanel implements ExecListener {
                 }
             }
         });
-        runAction = new AnAction("Run", "Run", Icons.Run) {
+        AnAction runAction = new AnAction("Run", "Run", Icons.Run) {
             @Override
             public void actionPerformed(AnActionEvent e) {
                 TaskExec taskExec = createTaskExec(buildProgressTask(executionNode -> true));
@@ -164,6 +163,8 @@ public class SSHTaskItem extends JPanel implements ExecListener {
         tree = initTree();
         this.add(tree);
         loadTaskTree();
+
+
     }
 
     @Override
@@ -243,6 +244,7 @@ public class SSHTaskItem extends JPanel implements ExecListener {
         DnDManager dndManager = DnDManager.getInstance();
         tree.setDragEnabled(true);
 
+
         dndManager.registerSource(new DnDSource() {
             @Override
             public boolean canStartDragging(DnDAction action, Point dragOrigin) {
@@ -266,8 +268,7 @@ public class SSHTaskItem extends JPanel implements ExecListener {
                 tree.repaint();
             }
         }, tree);
-
-        dndManager.registerTarget(new DnDTarget() {
+        dndManager.registerTarget(new DnDNativeTarget() {
             @Override
             public boolean update(DnDEvent event) {
                 Point point = event.getPoint();
@@ -276,15 +277,18 @@ public class SSHTaskItem extends JPanel implements ExecListener {
                     event.setDropPossible(false, "Invalid drop location");
                     return false;
                 }
-
-                DefaultMutableTreeNode target = (DefaultMutableTreeNode) path.getLastPathComponent();
-                DefaultMutableTreeNode source = (DefaultMutableTreeNode) event.getAttachedObject();
-
-                if (source == null) {
-                    event.setDropPossible(false, "Invalid source node");
-                    return false;
+                boolean fileListFlavorAvailable = FileCopyPasteUtil.isFileListFlavorAvailable(event);
+                if (fileListFlavorAvailable) {
+                    Rectangle bounds = tree.getPathBounds(path);
+                    if (bounds != null) {
+                        event.setHighlighting(new RelativeRectangle(tree, bounds), 1);
+                    }
+                    event.setDropPossible(true, "Drop here to copy and insert");
+                    return true;
                 }
 
+                if (!(event.getAttachedObject() instanceof DefaultMutableTreeNode source)) return false;
+                DefaultMutableTreeNode target = (DefaultMutableTreeNode) path.getLastPathComponent();
                 // 检查是否是ExecutionNode
                 if (!(source instanceof ExecutionNode)) {
                     event.setDropPossible(false, "Only execution nodes can be dragged");
@@ -324,13 +328,35 @@ public class SSHTaskItem extends JPanel implements ExecListener {
 
             @Override
             public void drop(DnDEvent event) {
+
                 Point point = event.getPoint();
                 TreePath path = tree.getClosestPathForLocation(point.x, point.y);
                 if (path == null) return;
-
                 DefaultMutableTreeNode target = (DefaultMutableTreeNode) path.getLastPathComponent();
+                List<File> fileList = FileCopyPasteUtil.getFileListFromAttachedObject(event.getAttachedObject());
+                if (!fileList.isEmpty()) {
+                    for (File file : fileList) {
+                        ExecuteInfo executeInfo = new ExecuteInfoBuilder()
+                                .executeType(ExecType.UPLOAD.getExecType())
+                                .build();
+                        FileMapChooseDialog fileMapChooseDialog = new FileMapChooseDialog(project, executeInfo);
+                        fileMapChooseDialog.setLocalPath(file.getAbsolutePath());
+                        fileMapChooseDialog.show();
+                        HostNode hostNode = null;
+                        if (target instanceof ExecutionNode executionNode) {
+                            hostNode = ((HostNode) executionNode.getParent());
+                        }
+                        if (target instanceof HostNode targetHostNode) {
+                            hostNode = targetHostNode;
+                        }
+                        if (fileMapChooseDialog.isOK() && hostNode != null) {
+                            doAddExecuteInfoToHosts(executeInfo, hostNode);
+                            TreeUtil.expandAll(tree);
+                        }
+                    }
+                    return;
+                }
                 DefaultMutableTreeNode source = (DefaultMutableTreeNode) event.getAttachedObject();
-
                 if (!(source instanceof ExecutionNode)) {
                     return;
                 }
@@ -609,17 +635,22 @@ public class SSHTaskItem extends JPanel implements ExecListener {
         return dialogWrapper;
     }
 
-    private void addExecuteInfoToHosts(ExecuteInfo executeInfo) {
+    private void doAddExecuteInfoToHosts(ExecuteInfo executeInfo, HostNode hostNode) {
         DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
+        ExecuteInfo cloned = executeInfo.clone();
+        hostNode.getHostInfo().getExecuteInfos().add(cloned);
+        // 直接插入到tree
+        ExecutionNode execNode = createExecuteNode(cloned);
+        hostNode.add(execNode);
+        model.nodeStructureChanged(hostNode);
+        updateSortValues(hostNode);
+
+    }
+
+    private void addExecuteInfoToHosts(ExecuteInfo executeInfo) {
         for (TreePath collectSelectedPath : TreeUtil.collectSelectedPaths(tree)) {
             if (collectSelectedPath.getLastPathComponent() instanceof HostNode hostNode) {
-                ExecuteInfo cloned = executeInfo.clone();
-                hostNode.getHostInfo().getExecuteInfos().add(cloned);
-                // 直接插入到tree
-                ExecutionNode execNode = createExecuteNode(cloned);
-                hostNode.add(execNode);
-                model.nodeStructureChanged(hostNode);
-                updateSortValues(hostNode);
+                doAddExecuteInfoToHosts(executeInfo, hostNode);
             }
         }
         TreeUtil.expandAll(tree);
