@@ -25,5 +25,10 @@
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow  id="SSH Task" secondary="true" icon="/icons/pluginIcon.svg" anchor="right"
                     factoryClass="dev.cool.ssh.task.toolwindow.SSHTaskWindow"/>
+        <notificationGroup
+                id="SSH Task Plugin"
+                displayType="BALLOON"
+                toolWindowId="TODO"
+        />
     </extensions>
 </idea-plugin>
